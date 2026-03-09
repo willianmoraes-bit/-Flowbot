@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
-const EVOLUTION_URL = process.env.EVOLUTION_URL || 'http://localhost:8080';
+const EVOLUTION_URL =process.env.EVOLUTION_URL || 'https://evolution-api-production-41a3.up.railway.app'
 const EVOLUTION_KEY = process.env.EVOLUTION_KEY  || 'flowbot123';
 
 // ── Pixel config em memória (restaurado pelo dashboard ao carregar) ──
@@ -53,7 +53,7 @@ async function evo(method, endpoint, body = null) {
 
 // ══════════════════════════
 // AUTH
-// ══════════════════════════
+// ══════════════════════════process.env.EVOLUTION_URL
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'dashboard.html')));
 app.post('/auth/register', async (req, res) => res.json(await register(req.body.email, req.body.password)));
 app.post('/auth/login',    async (req, res) => res.json(await login(req.body.email, req.body.password)));
