@@ -54,7 +54,7 @@ async function evo(method, endpoint, body = null) {
 // ══════════════════════════
 // AUTH
 // ══════════════════════════
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'login.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'dashboard.html')));
 app.post('/auth/register', async (req, res) => res.json(await register(req.body.email, req.body.password)));
 app.post('/auth/login',    async (req, res) => res.json(await login(req.body.email, req.body.password)));
 
