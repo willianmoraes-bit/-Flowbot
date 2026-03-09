@@ -312,7 +312,7 @@ app.post('/whatsapp/disconnect', async (req, res) => {
 });
 
 app.post('/whatsapp/setup-webhook', async (req, res) => {
-  const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:3000/webhook/messages';
+  const webhookUrl = process.env.WEBHOOK_URL || 'https://flowbot-production-2d32.up.railway.app/webhook/messages'
   try {
     const r = await evo('POST', `/webhook/set/${req.body.instanceName}`, {
       url: webhookUrl,
