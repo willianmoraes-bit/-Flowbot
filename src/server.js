@@ -256,10 +256,16 @@ app.post('/whatsapp/connect', async (req, res) => {
   const { userId = 'default', method = 'qr', phone } = req.body;
   const instanceName = `flowbot_${userId}`;
   try {
+    // Verifica se instância já existe e está conectada
+    try {
+      const status = await evo('GET', `/instance/connectionState/${instanceName}`);
+      if (status?.instance?.state === 'open') {
+        return res.json({ instanceName, connected: true, number: status?.instance?.ownerJid?.replace('@s.whatsapp.net','') });
+      }
+    } catch(e) {}
     // Remove instância antiga se existir
     try { await evo('DELETE', `/instance/delete/${instanceName}`); } catch(e) {}
     await new Promise(r => setTimeout(r, 800));
-
     // Cria nova instância
     await evo('POST', '/instance/create', {
       instanceName,
