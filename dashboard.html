@@ -1855,11 +1855,15 @@ async function disconnectWA() {
 
 // Verifica status ao carregar a página
 async function checkWAOnLoad() {
-  if (!waInstanceName) return;
+  const instance = waInstanceName || 'flowbot_default';
   try {
-    const res = await fetch(`${API}/whatsapp/status/${waInstanceName}`);
+    const res = await fetch(`${API}/whatsapp/status/${instance}`);
     const data = await res.json();
-    if (data.connected) setWAConnected(data.number);
+    if (data.connected) {
+      waInstanceName = instance;
+      localStorage.setItem('waInstance', instance);
+      setWAConnected(data.number);
+    }
   } catch(e) {}
 }
 
