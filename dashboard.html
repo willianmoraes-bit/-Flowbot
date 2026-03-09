@@ -1,0 +1,2910 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FlowBot</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#4f8ef7;--blue-d:#3570d4;--blue-l:#e8f1fe;--blue-xl:#f0f6ff;--blue-m:#c5d9fc;
+  --bg:#f0f6ff;--sur:#fff;--bdr:#dce8fb;--txt:#1a2540;--mut:#7a90b5;--mut2:#a8bcda;
+  --grn:#2ecc8a;--org:#f5a623;--red:#e85d5d;--pur:#7c6ff5;--sw:242px;
+}
+*{font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--txt);min-height:100vh;display:flex;overflow-x:hidden}
+
+/* ── SIDEBAR ── */
+.sb{width:var(--sw);flex-shrink:0;background:var(--sur);border-right:1.5px solid var(--bdr);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:200;transition:transform .3s;box-shadow:2px 0 20px rgba(79,142,247,.06)}
+.sb-logo{padding:18px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1.5px solid var(--bdr)}
+.sb-ico{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#7eb8fc);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(79,142,247,.32);flex-shrink:0}
+.sb-brand{font-size:1rem;font-weight:800;letter-spacing:-.02em}
+.sb-brand span{color:var(--blue)}
+.wa-status{margin:10px 12px;padding:8px 12px;border-radius:10px;display:flex;align-items:center;gap:8px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .18s;border:1.5px solid}
+.wa-status.connected{background:rgba(46,204,138,.07);border-color:rgba(46,204,138,.25);color:#1a9e65}
+.wa-status.disconnected{background:rgba(232,93,93,.06);border-color:rgba(232,93,93,.2);color:var(--red)}
+.wa-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.wa-dot.on{background:var(--grn);box-shadow:0 0 0 2px rgba(46,204,138,.25)}
+.wa-dot.off{background:var(--red)}
+.nav{flex:1;padding:8px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.nav-sec{font-size:.59rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut2);padding:12px 10px 4px}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:500;color:var(--mut);transition:all .18s;position:relative;border:none;background:none;width:100%;text-align:left}
+.ni svg{flex-shrink:0;opacity:.6;transition:opacity .18s}
+.ni:hover{background:var(--blue-xl);color:var(--blue-d)}
+.ni:hover svg{opacity:1}
+.ni.active{background:var(--blue-l);color:var(--blue-d);font-weight:700}
+.ni.active svg{opacity:1}
+.ni.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--blue);border-radius:0 3px 3px 0}
+.nbadge{margin-left:auto;font-size:.59rem;padding:2px 6px;border-radius:20px;font-weight:700;line-height:1.5}
+.nbadge.b{background:var(--blue);color:#fff}
+.nbadge.g{background:var(--grn);color:#fff}
+.nbadge.new{background:linear-gradient(135deg,var(--blue),var(--pur));color:#fff}
+.sb-bot{padding:10px;border-top:1.5px solid var(--bdr)}
+.user-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;cursor:pointer;transition:background .18s}
+.user-row:hover{background:var(--blue-xl)}
+.av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#7eb8fc);display:flex;align-items:center;justify-content:center;font-size:.73rem;font-weight:800;color:#fff;flex-shrink:0}
+.u-name{font-size:.79rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.plan-tag{display:inline-block;background:var(--blue-l);color:var(--blue-d);font-size:.57rem;font-weight:700;padding:2px 6px;border-radius:20px;margin-top:2px}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(240,246,255,.94);backdrop-filter:blur(16px);border-bottom:1.5px solid var(--bdr);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tb-l{display:flex;align-items:center;gap:10px}
+.hbg{display:none;width:32px;height:32px;border:none;background:none;cursor:pointer;color:var(--txt);border-radius:8px;transition:background .18s;align-items:center;justify-content:center}
+.hbg:hover{background:var(--blue-l)}
+.pg-ttl{font-size:.97rem;font-weight:800}
+.pg-sub{font-size:.68rem;color:var(--mut);margin-top:1px}
+.tb-r{display:flex;align-items:center;gap:7px}
+.tbtn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;font-size:.78rem;font-weight:600;cursor:pointer;border:none;transition:all .18s;font-family:inherit}
+.tbtn.out{background:var(--sur);border:1.5px solid var(--bdr);color:var(--mut)}
+.tbtn.out:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-xl)}
+.tbtn.pri{background:var(--blue);color:#fff;box-shadow:0 3px 10px rgba(79,142,247,.26)}
+.tbtn.pri:hover{background:var(--blue-d);transform:translateY(-1px)}
+.ntf{width:32px;height:32px;border-radius:9px;border:1.5px solid var(--bdr);background:var(--sur);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .18s}
+.ntf:hover{border-color:var(--blue);background:var(--blue-xl)}
+.ndot{position:absolute;top:5px;right:5px;width:6px;height:6px;background:var(--blue);border-radius:50%;border:2px solid var(--bg)}
+
+/* ── CONTENT ── */
+.content{padding:22px 24px;flex:1}
+.page{display:none}
+.page.active{display:block;animation:fadeUp .28s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── CARDS / LAYOUT ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--sur);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;transition:all .2s;cursor:default}
+.kpi:hover{border-color:var(--blue-m);box-shadow:0 4px 18px rgba(79,142,247,.09);transform:translateY(-2px)}
+.kpi-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kpi-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-ic.b{background:var(--blue-l)} .kpi-ic.g{background:rgba(46,204,138,.1)} .kpi-ic.o{background:rgba(245,166,35,.1)} .kpi-ic.r{background:rgba(232,93,93,.09)} .kpi-ic.p{background:rgba(124,111,245,.1)}
+.tag{font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:20px}
+.tag.up{background:rgba(46,204,138,.11);color:var(--grn)} .tag.dn{background:rgba(232,93,93,.09);color:var(--red)} .tag.nu{background:var(--blue-l);color:var(--blue-d)}
+.kpi-val{font-size:1.22rem;font-weight:800;line-height:1;margin-bottom:2px}
+.kpi-lbl{font-size:.69rem;color:var(--mut)}
+.kpi-sub{font-size:.64rem;color:var(--mut2);margin-top:5px;padding-top:5px;border-top:1.5px solid var(--bdr)}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:13px;margin-bottom:13px}
+.row2b{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
+.card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:14px;padding:18px}
+.card-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.card-ttl{font-size:.86rem;font-weight:800}
+.card-sub{font-size:.69rem;color:var(--mut);margin-top:2px}
+.chart-wrap{height:190px;position:relative}
+.chart-wrap.lg{height:220px}
+.link-all{font-size:.72rem;color:var(--blue);font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.link-all:hover{text-decoration:underline}
+.period-tabs{display:flex;gap:2px;background:var(--blue-xl);padding:3px;border-radius:8px}
+.ptab{padding:4px 10px;border-radius:6px;font-size:.69rem;font-weight:600;cursor:pointer;color:var(--mut);border:none;background:none;font-family:inherit;transition:all .18s}
+.ptab.active{background:#fff;color:var(--blue-d);box-shadow:0 1px 4px rgba(79,142,247,.13)}
+
+/* ── SALES CHART ── */
+.chart-toggle-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:.78rem;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:var(--sur);color:var(--blue-d);font-family:inherit;transition:all .2s}
+.chart-toggle-btn:hover{border-color:var(--blue);background:var(--blue-xl);box-shadow:0 2px 8px rgba(79,142,247,.12)}
+.chart-toggle-btn.open{background:var(--blue-xl);border-color:var(--blue)}
+.chart-toggle-arrow{transition:transform .25s}
+.chart-toggle-arrow.open{transform:rotate(180deg)}
+.sales-chart-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:14px;padding:18px;margin-bottom:14px;animation:fadeUp .22s ease both}
+.df-wrap{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.df-btn{padding:5px 13px;border-radius:8px;font-size:.74rem;font-weight:600;cursor:pointer;border:1.5px solid var(--bdr);background:var(--sur);color:var(--mut);font-family:inherit;transition:all .18s;white-space:nowrap}
+.df-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-xl)}
+.df-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 8px rgba(79,142,247,.25)}
+.df-sep{width:1px;height:20px;background:var(--bdr);margin:0 2px}
+.df-range{display:flex;align-items:center;gap:5px;font-size:.74rem;color:var(--mut);font-weight:500}
+/* Mini calendar popover */
+.cal-pop{position:absolute;top:calc(100% + 6px);left:0;background:var(--sur);border:1.5px solid var(--bdr);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(26,37,64,.13);z-index:200;display:none;min-width:280px}
+.cal-pop.show{display:block}
+.cal-pop-wrap{position:relative}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--bdr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--mut);transition:all .18s}
+.cal-nav:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-xl)}
+.cal-month{font-size:.82rem;font-weight:800}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dow{font-size:.6rem;font-weight:700;color:var(--mut2);text-align:center;padding:2px 0 5px}
+.cal-day{aspect-ratio:1;border-radius:7px;font-size:.72rem;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;border:1.5px solid transparent;color:var(--txt)}
+.cal-day:hover{background:var(--blue-xl);border-color:var(--blue-m);color:var(--blue)}
+.cal-day.other{color:var(--mut2)}
+.cal-day.today{border-color:var(--blue-m);color:var(--blue)}
+.cal-day.selected{background:var(--blue);color:#fff;border-color:var(--blue)}
+.cal-day.in-range{background:var(--blue-l);color:var(--blue-d)}
+.cal-day.range-start,.cal-day.range-end{background:var(--blue);color:#fff;border-color:var(--blue)}
+.cal-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.cal-inp-lbl{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:3px}
+.cal-inp-val{font-size:.76rem;font-weight:600;color:var(--txt);background:var(--blue-xl);padding:6px 10px;border-radius:8px;border:1.5px solid var(--bdr)}
+.legs{display:flex;gap:10px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:.69rem;color:var(--mut);font-weight:500}
+.leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse}
+th{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mut2);padding:0 12px 10px 0;text-align:left;white-space:nowrap}
+th:last-child{padding-right:0}
+td{font-size:.78rem;padding:9px 12px 9px 0;border-top:1.5px solid var(--bdr);vertical-align:middle}
+td:last-child{padding-right:0}
+.td-name{font-weight:600}
+.td-val{font-weight:700;text-align:right}
+.pill{display:inline-flex;align-items:center;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.pill.paid{background:rgba(46,204,138,.1);color:var(--grn)}
+.pill.pending{background:rgba(245,166,35,.1);color:var(--org)}
+.pill.canceled{background:rgba(232,93,93,.09);color:var(--red)}
+.pill.meta{background:var(--blue-l);color:var(--blue-d)}
+.pill.wa{background:rgba(46,204,138,.1);color:var(--grn)}
+.pill.org{background:rgba(245,166,35,.1);color:var(--org)}
+.pill.contact{background:var(--blue-l);color:var(--blue-d)}
+.pill.purchase{background:rgba(46,204,138,.1);color:var(--grn)}
+.pill.lead{background:rgba(124,111,245,.1);color:var(--pur)}
+.pill.fez{background:rgba(79,142,247,.1);color:var(--blue-d)}
+.pill.oferta{background:rgba(245,166,35,.1);color:var(--org)}
+.pill.comprou{background:rgba(46,204,138,.1);color:var(--grn)}
+.t-btn{background:none;border:none;cursor:pointer;color:var(--mut);padding:4px;border-radius:6px;transition:all .18s;display:flex;align-items:center}
+.t-btn:hover{background:var(--blue-xl);color:var(--blue)}
+
+/* ── FUNNEL VISUAL ── */
+.funnel{display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0}
+.funnel-stage{width:100%;display:flex;flex-direction:column;align-items:center}
+.funnel-block{border-radius:10px;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;transition:all .3s;cursor:default;position:relative}
+.funnel-block:hover{filter:brightness(1.07)}
+.funnel-arrow{width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;margin:0 auto}
+.funnel-lbl{font-size:.78rem;font-weight:700;color:#fff}
+.funnel-sub{font-size:.62rem;color:rgba(255,255,255,.75);margin-top:1px}
+.funnel-nums{text-align:right}
+.funnel-count{font-size:1.1rem;font-weight:900;color:#fff;line-height:1}
+.funnel-pct{font-size:.62rem;color:rgba(255,255,255,.75);margin-top:2px}
+.funnel-conv{font-size:.65rem;color:var(--mut);text-align:center;padding:3px 0 1px}
+
+/* ── ACTIVITY ── */
+.act{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1.5px solid var(--bdr)}
+.act:last-child{border-bottom:none}
+.act-ic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-ic.b{background:var(--blue-l)} .act-ic.g{background:rgba(46,204,138,.1)} .act-ic.o{background:rgba(245,166,35,.1)} .act-ic.r{background:rgba(232,93,93,.08)} .act-ic.p{background:rgba(124,111,245,.1)}
+.act-txt{font-size:.76rem;line-height:1.45}
+.act-time{font-size:.62rem;color:var(--mut2);margin-top:2px}
+
+/* ── CONVERSATIONS ── */
+.conv-wrap{display:grid;grid-template-columns:280px 1fr;gap:0;border:1.5px solid var(--bdr);border-radius:14px;overflow:hidden;height:520px}
+.conv-list{border-right:1.5px solid var(--bdr);overflow-y:auto;background:var(--sur)}
+.conv-search{padding:12px;border-bottom:1.5px solid var(--bdr)}
+.conv-search input{width:100%;padding:8px 12px;border:1.5px solid var(--bdr);border-radius:9px;font-size:.78rem;outline:none;background:var(--blue-xl);color:var(--txt);font-family:inherit;transition:all .2s}
+.conv-search input:focus{border-color:var(--blue);background:#fff}
+.conv-item{padding:11px 14px;cursor:pointer;transition:background .18s;border-bottom:1.5px solid var(--bdr)}
+.conv-item:hover{background:var(--blue-xl)}
+.conv-item.active{background:var(--blue-l)}
+.conv-name{font-size:.82rem;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.conv-phone{font-size:.69rem;color:var(--mut);margin-top:1px}
+.conv-preview{font-size:.72rem;color:var(--mut);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-time{font-size:.62rem;color:var(--mut2)}
+.conv-main{display:flex;flex-direction:column;background:var(--blue-xl)}
+.conv-header{padding:12px 16px;background:var(--sur);border-bottom:1.5px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.conv-hname{font-size:.88rem;font-weight:800}
+.conv-hphone{font-size:.7rem;color:var(--mut);margin-top:1px}
+.conv-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:70%;padding:9px 13px;border-radius:12px;font-size:.78rem;line-height:1.5}
+.msg.in{background:#fff;border:1.5px solid var(--bdr);align-self:flex-start;border-radius:4px 12px 12px 12px}
+.msg.out{background:var(--blue);color:#fff;align-self:flex-end;border-radius:12px 4px 12px 12px}
+.msg-time{font-size:.6rem;opacity:.6;margin-top:3px;text-align:right}
+.msg-tag{display:inline-flex;align-items:center;gap:4px;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:4px}
+.msg-tag.pay{background:rgba(46,204,138,.12);color:var(--grn)}
+.msg-tag.lead{background:rgba(79,142,247,.12);color:var(--blue-d)}
+.msg-tag.cancel{background:rgba(232,93,93,.1);color:var(--red)}
+.conv-input{padding:10px 14px;background:var(--sur);border-top:1.5px solid var(--bdr);display:flex;gap:8px}
+.conv-input input{flex:1;padding:9px 13px;border:1.5px solid var(--bdr);border-radius:10px;font-size:.82rem;outline:none;font-family:inherit;transition:all .2s}
+.conv-input input:focus{border-color:var(--blue)}
+.send-btn{padding:9px 16px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .18s}
+.send-btn:hover{background:var(--blue-d)}
+
+/* ── CONNECTIONS ── */
+.conn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.conn-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:14px;padding:20px;transition:all .2s}
+.conn-card:hover{border-color:var(--blue-m);box-shadow:0 4px 18px rgba(79,142,247,.08)}
+.conn-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.conn-logo{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.conn-name{font-size:.9rem;font-weight:800}
+.conn-desc{font-size:.72rem;color:var(--mut);margin-top:2px}
+.conn-status{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:600;margin-bottom:14px}
+.cdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cdot.on{background:var(--grn);box-shadow:0 0 0 2px rgba(46,204,138,.2)}
+.cdot.off{background:var(--mut2)}
+.conn-btn{width:100%;padding:9px;border-radius:10px;font-size:.79rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;border:none}
+.conn-btn.connect{background:var(--blue);color:#fff;box-shadow:0 3px 10px rgba(79,142,247,.22)}
+.conn-btn.connect:hover{background:var(--blue-d);transform:translateY(-1px)}
+.conn-btn.disconnect{background:rgba(232,93,93,.09);color:var(--red);border:1.5px solid rgba(232,93,93,.2)}
+.conn-btn.disconnect:hover{background:rgba(232,93,93,.15)}
+.conn-btn.configured{background:rgba(46,204,138,.1);color:#1a9e65;border:1.5px solid rgba(46,204,138,.2)}
+.qr-box{background:var(--blue-xl);border:1.5px dashed var(--blue-m);border-radius:10px;padding:20px;text-align:center;margin-top:12px}
+.qr-img{width:100px;height:100px;background:#fff;border-radius:8px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(79,142,247,.1)}
+.qr-txt{font-size:.72rem;color:var(--mut)}
+.conn-field{margin-bottom:10px}
+.conn-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:4px}
+.conn-val{font-size:.76rem;color:var(--txt);background:var(--blue-xl);padding:7px 10px;border-radius:8px;word-break:break-all;font-family:monospace}
+
+/* ── SETTINGS ── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.settings-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:14px;padding:20px}
+.settings-ttl{font-size:.86rem;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.form-group{margin-bottom:13px}
+.form-label{display:block;font-size:.69rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:5px}
+.form-input{width:100%;padding:9px 13px;border:1.5px solid var(--bdr);border-radius:9px;font-size:.82rem;color:var(--txt);background:var(--sur);outline:none;transition:all .2s;font-family:inherit}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,142,247,.1)}
+.form-input::placeholder{color:var(--mut2)}
+.save-btn{padding:9px 20px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;box-shadow:0 3px 10px rgba(79,142,247,.22);display:inline-flex;align-items:center;gap:6px}
+.save-btn:hover{background:var(--blue-d);transform:translateY(-1px)}
+
+/* ── JOURNEY ── */
+.journey-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.add-btn{padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:.79rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .18s;box-shadow:0 3px 10px rgba(79,142,247,.22)}
+.add-btn:hover{background:var(--blue-d);transform:translateY(-1px)}
+.sec-btn{padding:9px 16px;background:var(--sur);border:1.5px solid var(--bdr);color:var(--mut);border-radius:9px;font-size:.79rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .18s}
+.sec-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-xl)}
+
+/* ── PIXEL LOGS ── */
+.pixel-table th{font-size:.61rem}
+.retorno-ok{width:18px;height:18px;border-radius:5px;background:rgba(46,204,138,.12);display:inline-flex;align-items:center;justify-content:center}
+.retorno-fail{width:18px;height:18px;border-radius:5px;background:rgba(232,93,93,.1);display:inline-flex;align-items:center;justify-content:center}
+.server-offline{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(232,93,93,.95);color:#fff;padding:7px 20px;font-size:.75rem;font-weight:700;display:none;align-items:center;gap:8px;border-radius:0 0 10px 10px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+
+/* ── INFO BANNER ── */
+.info-banner{background:linear-gradient(135deg,var(--blue-xl),rgba(124,111,245,.06));border:1.5px solid var(--blue-m);border-radius:12px;padding:16px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px}
+.info-banner-ico{width:36px;height:36px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.info-banner-ttl{font-size:.84rem;font-weight:800;margin-bottom:4px}
+.info-banner-pts{display:flex;flex-direction:column;gap:3px}
+.info-banner-pt{font-size:.73rem;color:var(--mut);display:flex;align-items:flex-start;gap:5px}
+.info-banner-pt::before{content:'·';color:var(--blue);font-weight:900;flex-shrink:0;margin-top:-1px}
+.info-banner-close{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--mut2);padding:2px;border-radius:6px;flex-shrink:0;transition:all .18s}
+.info-banner-close:hover{background:var(--blue-l);color:var(--mut)}
+
+/* ── MODAL ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(26,37,64,.25);z-index:300;backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}
+.modal-ov.show{display:flex}
+.modal{background:var(--sur);border-radius:16px;padding:24px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(26,37,64,.13);animation:fadeUp .28s ease both}
+.modal-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.modal-ttl{font-size:.97rem;font-weight:800;display:flex;align-items:center;gap:8px}
+.modal-ttl-ic{width:28px;height:28px;border-radius:8px;background:var(--blue-l);display:flex;align-items:center;justify-content:center}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--mut);display:flex;align-items:center;padding:2px;border-radius:6px;transition:background .18s;flex-shrink:0}
+.modal-close:hover{background:var(--blue-l)}
+.link-result{background:var(--blue-xl);border:1.5px solid var(--blue-m);border-radius:9px;padding:12px 13px;margin-top:13px}
+.link-url-txt{font-size:.78rem;color:var(--blue-d);font-weight:600;word-break:break-all;margin-bottom:9px}
+.copy-btn{padding:8px 15px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.copy-btn:hover{background:var(--blue-d)}
+
+/* ── LINKS PAGE ── */
+.lc-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:14px;padding:18px;margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.gen-btn{padding:9px 20px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;box-shadow:0 3px 10px rgba(79,142,247,.22);display:inline-flex;align-items:center;gap:7px}
+.gen-btn:hover{background:var(--blue-d);transform:translateY(-1px)}
+.link-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:11px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:all .2s}
+.link-card:hover{border-color:var(--blue-m);box-shadow:0 3px 12px rgba(79,142,247,.07)}
+.lk-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lk-info{flex:1;min-width:0}
+.lk-name{font-size:.81rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk-url{font-size:.69rem;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.lk-stats{display:flex;gap:16px;flex-shrink:0}
+.lks-val{font-size:.86rem;font-weight:800;line-height:1}
+.lks-lbl{font-size:.59rem;color:var(--mut);margin-top:1px}
+.lk-actions{display:flex;gap:4px}
+.ic-btn{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--bdr);background:var(--sur);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s}
+.ic-btn:hover{border-color:var(--blue);background:var(--blue-xl)}
+
+/* ── PLACEHOLDER ── */
+.ph{text-align:center;padding:60px 20px}
+.ph-ico{width:50px;height:50px;border-radius:14px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.ph-ttl{font-size:.97rem;font-weight:800;margin-bottom:6px}
+.ph-sub{font-size:.82rem;color:var(--mut)}
+
+/* ── MISC ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,37,64,.22);z-index:150}
+.overlay.show{display:block}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--txt);color:#fff;padding:9px 16px;border-radius:9px;font-size:.78rem;font-weight:500;transform:translateY(60px);opacity:0;transition:all .3s;z-index:999;box-shadow:0 6px 18px rgba(26,37,64,.16)}
+.toast.show{transform:translateY(0);opacity:1}
+select.form-input{cursor:pointer}
+
+/* ── TOGGLE ── */
+.tog{width:36px;height:20px;border-radius:20px;background:var(--bdr);cursor:pointer;position:relative;transition:background .22s;flex-shrink:0}
+.tog.on{background:var(--blue)}
+.tog-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .22s;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.tog.on .tog-knob{transform:translateX(16px)}
+
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.conn-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:960px){.row2,.row2b,.settings-grid{grid-template-columns:1fr}.conv-wrap{grid-template-columns:1fr}.conn-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.sb{transform:translateX(-100%)}.sb.open{transform:translateX(0)}.main{margin-left:0}.hbg{display:flex}.content{padding:14px}.topbar{padding:10px 14px}.kpi-grid{grid-template-columns:1fr 1fr}.tbtn span{display:none}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeSB()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sb" id="sb">
+  <div class="sb-logo">
+    <div class="sb-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+    <div class="sb-brand">Flow<span>Bot</span></div>
+  </div>
+
+  <div class="wa-status disconnected" id="waStatusBtn" onclick="goTo('conn',document.querySelectorAll('.ni')[7])">
+    <div class="wa-dot off" id="waDot"></div>
+    <span id="waStatusTxt">WhatsApp Desconectado</span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+
+  <nav class="nav">
+    <button class="ni active" onclick="goTo('dash',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="ni" onclick="goTo('conv',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Conversas <span class="nbadge b" id="convBadge" style="display:none">0</span>
+    </button>
+    <button class="ni" onclick="goTo('links',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Links Rastreáveis
+    </button>
+    <button class="ni" onclick="goTo('journey',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Jornada de Compra
+    </button>
+    <button class="ni" onclick="goTo('eventos',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="6" height="6" rx="1"/><rect x="9" y="3" width="13" height="6" rx="1"/><rect x="2" y="13" width="13" height="6" rx="1"/><rect x="19" y="13" width="3" height="6" rx="1"/></svg>
+      Eventos de Conversão
+    </button>
+    <button class="ni" onclick="goTo('pixel',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Disparos de Pixel
+    </button>
+    <div class="nav-sec">Config</div>
+    <button class="ni" onclick="goTo('conn',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><path d="M5 8v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8"/><path d="M12 12v4"/></svg>
+      Conexões
+    </button>
+    <button class="ni" onclick="goTo('settings',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configurações
+    </button>
+    <button class="ni" onclick="doLogout()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </button>
+  </nav>
+
+  <div class="sb-bot">
+    <div class="user-row">
+      <div class="av" id="userAv">W</div>
+      <div style="min-width:0">
+        <div class="u-name" id="userName">Carregando...</div>
+        <div class="plan-tag">Plano Grátis</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-l">
+      <button class="hbg" onclick="toggleSB()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <div>
+        <div class="pg-ttl" id="pageTitle">Dashboard</div>
+        <div class="pg-sub" id="pageBread">Início · Visão geral</div>
+      </div>
+    </div>
+    <div class="tb-r">
+      <div class="ntf"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mut)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="ndot"></div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dash">
+
+      <!-- Filtro de período -->
+      <div class="df-wrap">
+        <button class="df-btn active" onclick="setDateFilter(1,this)">Hoje</button>
+        <button class="df-btn" onclick="setDateFilter(3,this)">3 dias</button>
+        <button class="df-btn" onclick="setDateFilter(7,this)">7 dias</button>
+        <button class="df-btn" onclick="setDateFilter(15,this)">15 dias</button>
+        <button class="df-btn" onclick="setDateFilter(30,this)">30 dias</button>
+        <button class="df-btn" onclick="setDateFilter('month',this)">Este mês</button>
+        <div class="df-sep"></div>
+        <div class="cal-pop-wrap">
+          <button class="df-btn" id="dfCustomBtn" onclick="toggleCalPop()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="dfCustomLbl">Personalizado</span>
+          </button>
+          <div class="cal-pop" id="calPop">
+            <div class="cal-header">
+              <button class="cal-nav" onclick="calPrevMonth()"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <span class="cal-month" id="calMonthLbl"></span>
+              <button class="cal-nav" onclick="calNextMonth()"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+            <div class="cal-grid">
+              <div class="cal-dow">Dom</div><div class="cal-dow">Seg</div><div class="cal-dow">Ter</div>
+              <div class="cal-dow">Qua</div><div class="cal-dow">Qui</div><div class="cal-dow">Sex</div><div class="cal-dow">Sáb</div>
+            </div>
+            <div class="cal-grid" id="calDays"></div>
+            <div class="cal-inputs">
+              <div><div class="cal-inp-lbl">De</div><div class="cal-inp-val" id="calFrom">—</div></div>
+              <div><div class="cal-inp-lbl">Até</div><div class="cal-inp-val" id="calTo">—</div></div>
+            </div>
+            <button class="save-btn" style="width:100%;margin-top:10px;justify-content:center" onclick="applyCustomRange()">Aplicar período</button>
+          </div>
+        </div>
+        <span class="df-range" id="dfRangeLbl"></span>
+      </div>
+
+      <!-- Toggle gráfico de vendas -->
+      <div style="margin-bottom:14px">
+        <button class="chart-toggle-btn" id="chartToggleBtn" onclick="toggleSalesChart()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span id="chartToggleLbl">Mostrar gráfico de vendas</span>
+          <svg class="chart-toggle-arrow" id="chartToggleArrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+
+      <!-- Gráfico de vendas (oculto por padrão) -->
+      <div class="sales-chart-card" id="salesChartCard" style="display:none">
+        <div class="card-h">
+          <div>
+            <div class="card-ttl">Contatos vs Vendas</div>
+            <div class="card-sub" id="chartSubLbl">Período selecionado</div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <div style="display:flex;align-items:center;gap:5px;font-size:.71rem;color:var(--mut);font-weight:600">
+              <div style="width:10px;height:10px;border-radius:3px;background:#a8d4fd"></div> Contatos
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:.71rem;color:var(--mut);font-weight:600">
+              <div style="width:10px;height:10px;border-radius:3px;background:#2864cc"></div> Vendas
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;height:200px;margin-top:4px">
+          <svg id="salesChartSvg" width="100%" height="200" style="overflow:visible"></svg>
+        </div>
+        <div id="salesChartXLabels" style="display:flex;justify-content:space-between;padding:6px 0 0;margin-top:2px"></div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-h"><div class="kpi-ic b"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="tag nu" id="kpi-rev-tag">—</span></div><div class="kpi-val" id="kpi-rev">R$ 0</div><div class="kpi-lbl">Receita do mês</div><div class="kpi-sub" id="kpi-rev-sub">Conecte o WhatsApp para começar</div></div>
+        <div class="kpi"><div class="kpi-h"><div class="kpi-ic g"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><span class="tag nu" id="kpi-conv-tag">—</span></div><div class="kpi-val" id="kpi-conv">0</div><div class="kpi-lbl">Conversas WhatsApp</div><div class="kpi-sub" id="kpi-conv-sub">Nenhuma conversa ainda</div></div>
+        <div class="kpi"><div class="kpi-h"><div class="kpi-ic o"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><span class="tag nu" id="kpi-clicks-tag">—</span></div><div class="kpi-val" id="kpi-clicks">0</div><div class="kpi-lbl">Cliques nos links</div><div class="kpi-sub">Crie links rastreáveis</div></div>
+        <div class="kpi"><div class="kpi-h"><div class="kpi-ic p"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--pur)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><span class="tag nu" id="kpi-pixel-tag">—</span></div><div class="kpi-val" id="kpi-pixel">0</div><div class="kpi-lbl">Disparos de Pixel</div><div class="kpi-sub">Configure Meta Ads</div></div>
+      </div>
+
+      <div class="row2b">
+        <div class="card">
+          <div class="card-h"><div><div class="card-ttl">Funil de conversas</div><div class="card-sub">WhatsApp → Venda</div></div></div>
+          <div class="funnel" id="funnelEl"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><div class="card-ttl">Atividade recente</div><div class="card-sub">Eventos em tempo real</div></div></div>
+          <div id="actEl"><div style="text-align:center;padding:30px 0;color:var(--mut2);font-size:.8rem">Nenhuma atividade ainda.<br>Conecte o WhatsApp para começar.</div></div>
+          <div id="actRefreshIndicator" style="display:none;text-align:center;padding:4px;font-size:.65rem;color:var(--blue);font-weight:600">● ao vivo</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div><div class="card-ttl">Últimas conversas</div></div><a class="link-all" onclick="goTo('conv',document.querySelectorAll('.ni')[1])">Ver todas</a></div>
+        <div style="text-align:center;padding:30px 0;color:var(--mut2);font-size:.8rem">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-m)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Nenhuma conversa ainda. Conecte o WhatsApp para começar.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONVERSAS ── -->
+    <div class="page" id="page-conv">
+      <div class="conv-wrap">
+        <div class="conv-list">
+          <div class="conv-search"><input placeholder="Buscar conversa..." id="convSearch" oninput="filterConvs(this.value)"/></div>
+          <div id="convListEl"></div>
+        </div>
+        <div class="conv-main">
+          <div class="conv-header" id="convHeader">
+            <div>
+              <div class="conv-hname" id="convName">Selecione uma conversa</div>
+              <div class="conv-hphone" id="convPhone">—</div>
+            </div>
+            <div id="convStage"></div>
+          </div>
+          <div class="conv-msgs" id="convMsgs">
+            <div style="text-align:center;padding:40px 20px;color:var(--mut2);font-size:.8rem">Selecione uma conversa ao lado</div>
+          </div>
+          <div class="conv-input">
+            <input placeholder="Digite uma mensagem..." id="msgInput"/>
+            <button class="send-btn" onclick="sendMsg()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LINKS ── -->
+    <div class="page" id="page-links">
+      <div class="lc-card">
+        <div class="card-ttl" style="margin-bottom:3px">Criar link rastreável</div>
+        <div class="card-sub" style="margin-bottom:14px">O link direciona para o seu WhatsApp conectado e registra cada clique</div>
+        <div class="form-row" style="margin-bottom:11px">
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Nome da campanha</label><input class="form-input" id="lkName" placeholder="Ex: Promo Março 2026"/></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Mensagem inicial</label><input class="form-input" id="lkMsg" placeholder="Ex: Vim pelo Instagram!"/></div>
+        </div>
+        <div class="form-row" style="margin-bottom:14px">
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Fonte</label><select class="form-input" id="lkSource"><option value="meta">Meta Ads (Facebook)</option><option value="instagram">Instagram</option><option value="google">Google Ads</option><option value="email">E-mail</option><option value="organico">Orgânico</option></select></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Tipo</label><select class="form-input" id="lkMedium"><option>Anúncio pago</option><option>Post orgânico</option><option>Stories</option><option>Link na bio</option><option>Mensagem direta</option></select></div>
+        </div>
+        <button class="gen-btn" onclick="generateLink()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Gerar link
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div><div class="card-ttl">Seus links</div><div class="card-sub" id="linksCount">0 links ativos</div></div>
+      </div>
+      <div id="linksEl"><div style="text-align:center;padding:40px;color:var(--mut2);font-size:.8rem">Nenhum link criado ainda.</div></div>
+    </div>
+
+
+    <!-- ── JORNADA ── -->
+    <div class="page" id="page-journey">
+      <div class="info-banner" id="journeyBanner">
+        <div class="info-banner-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div>
+        <div>
+          <div class="info-banner-ttl">Acompanhe cada etapa do funil de vendas</div>
+          <div class="info-banner-pts">
+            <div class="info-banner-pt">Defina etapas do primeiro contato à venda</div>
+            <div class="info-banner-pt">Palavras-chave detectadas nas conversas movem o lead automaticamente</div>
+            <div class="info-banner-pt">Vincule eventos de pixel às etapas para disparar conversões</div>
+          </div>
+        </div>
+        <button class="info-banner-close" onclick="document.getElementById('journeyBanner').style.display='none'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="journey-header">
+        <button class="add-btn" onclick="openJourneyModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar Nova Etapa
+        </button>
+        <button class="sec-btn" onclick="openSortModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>
+          Ordenar Etapas
+        </button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead style="background:var(--blue-xl)"><tr>
+            <th style="padding:12px 16px">ID</th>
+            <th>Ordem</th>
+            <th>Nome da Etapa</th>
+            <th>Palavras-chave</th>
+            <th>Evento Pixel</th>
+            <th>Ações</th>
+          </tr></thead>
+          <tbody id="journeyEl"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── EVENTOS ── -->
+    <div class="page" id="page-eventos">
+      <div class="info-banner" id="eventosBanner">
+        <div class="info-banner-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="6" height="6" rx="1"/><rect x="9" y="3" width="13" height="6" rx="1"/><rect x="2" y="13" width="13" height="6" rx="1"/><rect x="19" y="13" width="3" height="6" rx="1"/></svg></div>
+        <div>
+          <div class="info-banner-ttl">Configure e vincule eventos de conversão</div>
+          <div class="info-banner-pts">
+            <div class="info-banner-pt">Edite palavras-chave que disparam cada evento nas conversas</div>
+            <div class="info-banner-pt">Eventos são enviados automaticamente para Meta Ads e Google Ads</div>
+            <div class="info-banner-pt">Eventos de compra permitem definir produto e valor para o pixel</div>
+          </div>
+        </div>
+        <button class="info-banner-close" onclick="document.getElementById('eventosBanner').style.display='none'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <button class="add-btn" style="margin-bottom:16px" onclick="openEventoModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Novo Evento
+      </button>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead style="background:var(--blue-xl)"><tr>
+            <th style="padding:12px 16px;width:40px">#</th>
+            <th>Plataforma</th>
+            <th>Evento</th>
+            <th>Palavras-chave</th>
+            <th>Produto / Valor</th>
+            <th>Ações</th>
+          </tr></thead>
+          <tbody id="eventosEl"></tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ── PIXEL ── -->
+    <div class="page" id="page-pixel">
+      <div class="info-banner" id="pixelBanner">
+        <div class="info-banner-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <div>
+          <div class="info-banner-ttl">Envie conversões reais para o Pixel e otimize seus anúncios</div>
+          <div class="info-banner-pts">
+            <div class="info-banner-pt">Configure o envio automático de eventos para o Pixel do Meta Ads</div>
+            <div class="info-banner-pt">Potencialize o aprendizado do algoritmo com dados reais de conversão</div>
+            <div class="info-banner-pt">Acompanhe o impacto das vendas no desempenho dos seus anúncios</div>
+          </div>
+        </div>
+        <button class="info-banner-close" onclick="document.getElementById('pixelBanner').style.display='none'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="pixel-table">
+          <thead style="background:var(--blue-xl)"><tr><th style="padding:12px 16px">Data de Disparo</th><th>Conversa</th><th>Retorno</th><th>Etapa da Jornada</th><th>Evento</th><th>Plataforma</th></tr></thead>
+          <tbody id="pixelEl"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CONEXÕES ── -->
+    <div class="page" id="page-conn">
+      <div class="conn-grid">
+        <!-- WhatsApp -->
+        <div class="conn-card">
+          <div class="conn-head">
+            <div class="conn-logo" style="background:rgba(46,204,138,.1)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div>
+              <div class="conn-name">WhatsApp</div>
+              <div class="conn-desc">Evolution API · QR Code ou Código de Pareamento</div>
+            </div>
+          </div>
+          <div class="conn-status" id="waConnStatus"><div class="cdot off" id="waConnDot"></div><span id="waConnTxt" style="color:var(--mut)">Desconectado</span></div>
+          <div class="conn-field"><div class="conn-label">Número conectado</div><div class="conn-val" id="waNumber">—</div></div>
+
+          <!-- Seletor de método -->
+          <div id="waMethodSel" style="display:flex;gap:6px;margin:10px 0 8px">
+            <button class="df-btn active" id="waMQR" onclick="setWAMethod('qr',this)" style="flex:1;justify-content:center">
+              📷 QR Code
+            </button>
+            <button class="df-btn" id="waMP" onclick="setWAMethod('pairing',this)" style="flex:1;justify-content:center">
+              🔢 Código
+            </button>
+          </div>
+
+          <!-- Input número (para pairing code) -->
+          <div id="waPairingInput" style="display:none;margin-bottom:8px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Número do WhatsApp (com DDI)</label>
+              <input class="form-input" id="waPairingPhone" placeholder="Ex: 5511999999999" style="margin-top:4px"/>
+              <div style="font-size:.65rem;color:var(--mut2);margin-top:3px">Sem + ou espaços. Ex: 5521987654321</div>
+            </div>
+          </div>
+
+          <div class="qr-box" id="qrBox" style="display:none">
+            <div class="qr-img">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--blue-m)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><rect x="9" y="9" width="6" height="6"/><line x1="16" y1="9" x2="21" y2="9"/><line x1="16" y1="12" x2="21" y2="12"/><line x1="16" y1="15" x2="21" y2="15"/><line x1="9" y1="16" x2="9" y2="21"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
+            </div>
+            <div class="qr-txt">Clique em "Conectar" para gerar o QR Code</div>
+          </div>
+
+          <button class="conn-btn connect" id="waConnBtn" onclick="toggleWA()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Conectar WhatsApp
+          </button>
+        </div>
+
+        <!-- Meta Ads -->
+        <div class="conn-card">
+          <div class="conn-head">
+            <div class="conn-logo" style="background:var(--blue-l)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue-d)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            </div>
+            <div>
+              <div class="conn-name">Meta Ads</div>
+              <div class="conn-desc">Facebook Pixel + Conversions API (CAPI)</div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="conn-status" id="metaStatus">
+            <div class="cdot off" id="metaDot"></div>
+            <span id="metaTxt" style="color:var(--mut)">Não configurado</span>
+          </div>
+
+          <!-- Resultado do último teste -->
+          <div id="metaTestResult" style="display:none;margin:6px 0 8px;padding:8px 12px;border-radius:8px;font-size:.72rem;font-weight:600;line-height:1.4"></div>
+
+          <!-- Campos exibidos quando configurado -->
+          <div class="conn-field">
+            <div class="conn-label">Pixel ID</div>
+            <div class="conn-val" id="metaPixelId">—</div>
+          </div>
+          <div class="conn-field">
+            <div class="conn-label">Token CAPI</div>
+            <div class="conn-val" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="metaToken">—</div>
+          </div>
+          <div class="conn-field">
+            <div class="conn-label">Conta de Anúncio</div>
+            <div class="conn-val" id="metaAdAccount">—</div>
+          </div>
+          <div class="conn-field" id="metaLastFiredWrap" style="display:none">
+            <div class="conn-label">Último disparo</div>
+            <div class="conn-val" id="metaLastFired">—</div>
+          </div>
+
+          <!-- Botões -->
+          <div style="display:flex;gap:7px;margin-top:4px">
+            <button class="conn-btn connect" id="metaConnBtn" onclick="openMetaConfig()" style="flex:1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+              Configurar
+            </button>
+            <button class="conn-btn" id="metaTestBtn" onclick="runPixelTest()" style="display:none;flex:1;background:var(--blue-xl);color:var(--blue-d);border:1.5px solid var(--blue-m)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Testar Pixel
+            </button>
+          </div>
+        </div>
+
+        <!-- Google Ads -->
+        <div class="conn-card">
+          <div class="conn-head">
+            <div class="conn-logo" style="background:rgba(245,166,35,.1)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div><div class="conn-name">Google Ads</div><div class="conn-desc">Conversões offline + Google Tag</div></div>
+          </div>
+          <div class="conn-status" id="googleStatus"><div class="cdot off" id="googleDot"></div><span id="googleTxt" style="color:var(--mut)">Não configurado</span></div>
+          <div class="conn-field"><div class="conn-label">ID da Conta Google Ads</div><div class="conn-val" id="googleId">—</div></div>
+          <div class="conn-field"><div class="conn-label">ID de Conversão</div><div class="conn-val" id="googleConvId">—</div></div>
+          <div class="conn-field"><div class="conn-label">Label de Conversão</div><div class="conn-val" id="googleLabel">—</div></div>
+          <button class="conn-btn connect" id="googleConnBtn" onclick="openGoogleConfig()">Configurar Google Ads</button>
+        </div>
+      </div>
+
+      <!-- Config modals inline -->
+      <div id="metaConfigBox" style="display:none;margin-top:16px">
+        <div class="settings-card" style="max-width:560px">
+          <div class="settings-ttl" style="margin-bottom:6px">
+            <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-l);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></div>
+            Configurar Meta Ads
+          </div>
+
+          <!-- Guia rápido -->
+          <div style="background:var(--blue-xl);border:1.5px solid var(--blue-m);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:.72rem;color:var(--mut);line-height:1.7">
+            <strong style="color:var(--blue-d)">Como obter as credenciais:</strong><br>
+            1. Acesse <a href="https://business.facebook.com/events_manager" target="_blank" style="color:var(--blue);font-weight:700">Events Manager</a> → selecione seu Pixel<br>
+            2. <strong>Pixel ID:</strong> número na barra de URL ou no painel do Pixel<br>
+            3. <strong>Token CAPI:</strong> Configurações → API de Conversões → Gerar token de acesso
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Pixel ID <span style="color:var(--red)">*</span></label>
+            <input class="form-input" id="sPixelId" placeholder="Ex: 1234567890123456" inputmode="numeric"/>
+            <div style="font-size:.65rem;color:var(--mut2);margin-top:3px">Somente números, sem espaços.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Token de Acesso da API de Conversões <span style="color:var(--red)">*</span></label>
+            <div style="position:relative">
+              <input class="form-input" id="sToken" placeholder="EAAxxxxxxxx..." type="password" style="padding-right:40px"/>
+              <button onclick="toggleTokenVisibility()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--mut)" title="Mostrar/ocultar">
+                <svg id="tokenEyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div style="font-size:.65rem;color:var(--mut2);margin-top:3px">Token gerado no Events Manager. Começa com EAA...</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ID da Conta de Anúncio <span style="color:var(--mut);font-weight:400">(opcional)</span></label>
+            <input class="form-input" id="sAdAccount" placeholder="Ex: act_385027312040161"/>
+          </div>
+
+          <!-- Resultado inline do teste -->
+          <div id="metaFormTestResult" style="display:none;padding:10px 14px;border-radius:9px;font-size:.74rem;font-weight:600;margin-bottom:12px;line-height:1.5"></div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="save-btn" id="metaSaveBtn" onclick="saveMetaSettings()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Salvar e ativar Pixel
+            </button>
+            <button class="sec-btn" style="padding:9px 16px" onclick="document.getElementById('metaConfigBox').style.display='none'">Cancelar</button>
+            <button class="sec-btn" id="metaFormTestBtn" style="padding:9px 16px;margin-left:auto;display:none" onclick="runPixelTestFromForm()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Testar conexão
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="googleConfigBox" style="display:none;margin-top:16px">
+        <div class="settings-card" style="max-width:520px">
+          <div class="settings-ttl" style="margin-bottom:14px">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,166,35,.1);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+            Configurar Google Ads
+          </div>
+          <div class="form-group"><label class="form-label">ID da Conta Google Ads</label><input class="form-input" id="sGoogleId" placeholder="Ex: 123-456-7890"/></div>
+          <div class="form-group"><label class="form-label">ID de Conversão</label><input class="form-input" id="sGoogleConvId" placeholder="Ex: AW-123456789"/></div>
+          <div class="form-group"><label class="form-label">Label de Conversão</label><input class="form-input" id="sGoogleLabel" placeholder="Ex: abc123DEF"/></div>
+          <div style="display:flex;gap:8px">
+            <button class="save-btn" onclick="saveGoogleSettings()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Salvar e conectar
+            </button>
+            <button class="sec-btn" style="padding:9px 16px" onclick="document.getElementById('googleConfigBox').style.display='none'">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONFIGURAÇÕES ── -->
+    <div class="page" id="page-settings">
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:4px;background:var(--blue-xl);padding:4px;border-radius:10px;width:fit-content;margin-bottom:18px" id="settingsTabs">
+        <button class="ptab active" onclick="showSettingsTab('conta',this)">Minha Conta</button>
+        <button class="ptab" onclick="showSettingsTab('app',this)">Aparência</button>
+        <button class="ptab" onclick="showSettingsTab('notif',this)">Notificações</button>
+        <button class="ptab" onclick="showSettingsTab('integr',this)">Integrações</button>
+      </div>
+
+      <!-- Aba: Conta -->
+      <div id="stab-conta">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="settings-ttl">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-l);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              Perfil
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:16px;border-bottom:1.5px solid var(--bdr)">
+              <div class="av" id="settingsAv" style="width:48px;height:48px;font-size:1.1rem;border-radius:14px">W</div>
+              <div>
+                <div style="font-size:.82rem;font-weight:700" id="settingsName">Meu Negócio</div>
+                <div style="font-size:.72rem;color:var(--mut)" id="settingsEmail">—</div>
+                <div class="plan-tag" style="margin-top:4px">Plano Grátis</div>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">Nome do Negócio</label><input class="form-input" id="sName" placeholder="Ex: Loja do João"/></div>
+            <div class="form-group"><label class="form-label">E-mail da conta</label><input class="form-input" id="sEmail" placeholder="seu@email.com" type="email"/></div>
+            <div class="form-group"><label class="form-label">WhatsApp de atendimento</label><input class="form-input" id="sPhone" placeholder="(11) 99999-9999"/></div>
+            <div class="form-group"><label class="form-label">Mensagem de boas-vindas</label><input class="form-input" id="sWelcome" placeholder="Oi! Vim pelo link e quero saber mais 😊"/></div>
+            <button class="save-btn" onclick="saveSettings()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Salvar perfil
+            </button>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-ttl">
+              <div style="width:28px;height:28px;border-radius:8px;background:rgba(232,93,93,.09);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+              Segurança
+            </div>
+            <div class="form-group"><label class="form-label">Senha atual</label><input class="form-input" type="password" id="sCurrPass" placeholder="••••••••"/></div>
+            <div class="form-group"><label class="form-label">Nova senha</label><input class="form-input" type="password" id="sNewPass" placeholder="Mínimo 6 caracteres"/></div>
+            <div class="form-group"><label class="form-label">Confirmar nova senha</label><input class="form-input" type="password" id="sConfPass" placeholder="Repita a nova senha"/></div>
+            <button class="save-btn" style="background:rgba(232,93,93,.09);color:var(--red);box-shadow:none;border:1.5px solid rgba(232,93,93,.2)" onclick="changePassword()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Alterar senha
+            </button>
+
+            <div style="margin-top:20px;padding-top:16px;border-top:1.5px solid var(--bdr)">
+              <div style="font-size:.78rem;font-weight:700;margin-bottom:4px">Zona de perigo</div>
+              <div style="font-size:.72rem;color:var(--mut);margin-bottom:10px">Esta ação é irreversível e apagará todos os seus dados.</div>
+              <button class="save-btn" style="background:none;color:var(--red);box-shadow:none;border:1.5px solid rgba(232,93,93,.2);font-size:.75rem" onclick="showToast('Entre em contato com o suporte para excluir sua conta')">Excluir minha conta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aba: Aparência -->
+      <div id="stab-app" style="display:none">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="settings-ttl">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-l);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+              Tema
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+              <div id="themeLight" onclick="setTheme('light')" style="border:2px solid var(--blue);border-radius:10px;padding:14px;cursor:pointer;transition:all .18s;background:var(--blue-xl)">
+                <div style="width:100%;height:32px;background:#f0f6ff;border-radius:6px;margin-bottom:8px;border:1px solid var(--bdr)"></div>
+                <div style="font-size:.76rem;font-weight:700;text-align:center">☀️ Claro</div>
+              </div>
+              <div id="themeDark" onclick="setTheme('dark')" style="border:1.5px solid var(--bdr);border-radius:10px;padding:14px;cursor:pointer;transition:all .18s">
+                <div style="width:100%;height:32px;background:#1a2540;border-radius:6px;margin-bottom:8px"></div>
+                <div style="font-size:.76rem;font-weight:700;text-align:center">🌙 Escuro</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cor de destaque</label>
+              <div style="display:flex;gap:8px;margin-top:6px" id="accentColors">
+                <div onclick="setAccent('#4f8ef7')" style="width:28px;height:28px;border-radius:50%;background:#4f8ef7;cursor:pointer;border:3px solid var(--txt);transition:all .18s"></div>
+                <div onclick="setAccent('#7c6ff5')" style="width:28px;height:28px;border-radius:50%;background:#7c6ff5;cursor:pointer;border:3px solid transparent;transition:all .18s"></div>
+                <div onclick="setAccent('#2ecc8a')" style="width:28px;height:28px;border-radius:50%;background:#2ecc8a;cursor:pointer;border:3px solid transparent;transition:all .18s"></div>
+                <div onclick="setAccent('#e85d5d')" style="width:28px;height:28px;border-radius:50%;background:#e85d5d;cursor:pointer;border:3px solid transparent;transition:all .18s"></div>
+                <div onclick="setAccent('#f5a623')" style="width:28px;height:28px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;transition:all .18s"></div>
+              </div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-ttl">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-l);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+              Dashboard
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:.8rem;font-weight:600">Mostrar funil de conversas</div><div style="font-size:.69rem;color:var(--mut)">Exibe o funil no dashboard</div></div>
+                <div class="tog" id="togFunnel" onclick="togglePref('funnel',this)"><div class="tog-knob"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:.8rem;font-weight:600">Mostrar atividade recente</div><div style="font-size:.69rem;color:var(--mut)">Log de eventos em tempo real</div></div>
+                <div class="tog on" id="togActivity" onclick="togglePref('activity',this)"><div class="tog-knob"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:.8rem;font-weight:600">Sidebar compacta</div><div style="font-size:.69rem;color:var(--mut)">Reduz o menu lateral</div></div>
+                <div class="tog" id="togCompact" onclick="togglePref('compact',this)"><div class="tog-knob"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aba: Notificações -->
+      <div id="stab-notif" style="display:none">
+        <div class="settings-card" style="max-width:560px">
+          <div class="settings-ttl" style="margin-bottom:16px">
+            <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-l);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+            Notificações
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1.5px solid var(--bdr)">
+              <div><div style="font-size:.82rem;font-weight:700">Nova conversa no WhatsApp</div><div style="font-size:.72rem;color:var(--mut);margin-top:2px">Notificar quando chegar nova mensagem</div></div>
+              <div class="tog on" id="togNewConv" onclick="togglePref('newconv',this)"><div class="tog-knob"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1.5px solid var(--bdr)">
+              <div><div style="font-size:.82rem;font-weight:700">Pagamento confirmado</div><div style="font-size:.72rem;color:var(--mut);margin-top:2px">Notificar quando detectar uma compra</div></div>
+              <div class="tog on" id="togPayment" onclick="togglePref('payment',this)"><div class="tog-knob"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1.5px solid var(--bdr)">
+              <div><div style="font-size:.82rem;font-weight:700">Disparo de pixel com erro</div><div style="font-size:.72rem;color:var(--mut);margin-top:2px">Alertar quando um evento falhar</div></div>
+              <div class="tog on" id="togPixelErr" onclick="togglePref('pixelerr',this)"><div class="tog-knob"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1.5px solid var(--bdr)">
+              <div><div style="font-size:.82rem;font-weight:700">WhatsApp desconectado</div><div style="font-size:.72rem;color:var(--mut);margin-top:2px">Alertar quando o número cair</div></div>
+              <div class="tog on" id="togWADisc" onclick="togglePref('wadisc',this)"><div class="tog-knob"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-size:.82rem;font-weight:700">Relatório semanal por e-mail</div><div style="font-size:.72rem;color:var(--mut);margin-top:2px">Resumo de resultados toda segunda-feira</div></div>
+              <div class="tog" id="togWeekly" onclick="togglePref('weekly',this)"><div class="tog-knob"></div></div>
+            </div>
+          </div>
+          <button class="save-btn" style="margin-top:18px" onclick="showToast('Preferências de notificação salvas!')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Salvar preferências
+          </button>
+        </div>
+      </div>
+
+      <!-- Aba: Integrações (Webhooks) -->
+      <div id="stab-integr" style="display:none">
+        <div class="settings-card" style="max-width:560px">
+          <div class="settings-ttl" style="margin-bottom:16px">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(124,111,245,.1);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--pur)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><path d="M5 8v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8"/><path d="M12 12v4"/></svg></div>
+            Dados para integrações
+          </div>
+          <div class="form-group"><label class="form-label">Código único do cliente</label><div class="conn-val" id="clientCode" style="font-size:.72rem">—</div></div>
+          <div class="form-group"><label class="form-label">Webhook — criação de conversa</label><div class="conn-val" style="font-size:.68rem;word-break:break-all" id="webhookUrl">—</div></div>
+          <div class="form-group"><label class="form-label">Webhook — alteração de conversa</label><div class="conn-val" style="font-size:.68rem;word-break:break-all" id="webhookUrl2">—</div></div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="save-btn" style="background:var(--blue-xl);color:var(--blue-d);box-shadow:none;border:1.5px solid var(--blue-m)" onclick="copyWebhook()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copiar webhook
+            </button>
+          </div>
+
+          <div style="margin-top:20px;padding-top:16px;border-top:1.5px solid var(--bdr)">
+            <div style="font-size:.78rem;font-weight:700;margin-bottom:3px">Pixel do FlowBot (para seu site)</div>
+            <div style="font-size:.71rem;color:var(--mut);margin-bottom:10px">Cole esse código no seu site logo após a tag &lt;body&gt; para rastrear visitas</div>
+            <div class="conn-val" id="pixelScript" style="font-size:.65rem;white-space:pre-wrap;font-family:monospace;line-height:1.7">—</div>
+            <button class="save-btn" style="margin-top:10px;background:var(--blue-xl);color:var(--blue-d);box-shadow:none;border:1.5px solid var(--blue-m)" onclick="copyPixelScript()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copiar script
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL LINK GERADO -->
+<div class="modal-ov" id="modalOv">
+  <div class="modal">
+    <div class="modal-top">
+      <div>
+        <div class="modal-ttl"><div class="modal-ttl-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>Link gerado!</div>
+        <div style="font-size:.72rem;color:var(--mut);margin-top:2px">Direciona pro WhatsApp e registra cada clique</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="font-size:.8rem;color:var(--mut)">Campanha: <strong style="color:var(--txt)" id="mLkName">—</strong></div>
+    <div style="font-size:.8rem;color:var(--mut);margin-top:3px">Fonte: <strong style="color:var(--txt)" id="mLkSrc">—</strong></div>
+    <div class="link-result">
+      <div class="link-url-txt" id="mLkUrl">—</div>
+      <button class="copy-btn" onclick="copyModalLink()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL JORNADA ── -->
+<div class="modal-ov" id="journeyModalOv">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-top">
+      <div><div class="modal-ttl"><div class="modal-ttl-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div><span id="journeyModalTitle">Nova Etapa</span></div></div>
+      <button class="modal-close" onclick="closeJourneyModal()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <input type="hidden" id="jmEditId"/>
+
+    <div class="form-group">
+      <label class="form-label">Nome da etapa</label>
+      <input class="form-input" id="jmName" placeholder="Ex: Fez Contato, Oferta Enviada, Comprou..."/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Evento de Pixel vinculado</label>
+      <select class="form-input" id="jmEvent" onchange="checkJourneyPurchase()">
+        <option value="">— Nenhum —</option>
+        <option value="Contact">Contact — primeiro contato</option>
+        <option value="Lead">Lead — interesse confirmado</option>
+        <option value="AddToCart">AddToCart — intenção de compra</option>
+        <option value="AddPaymentInfo">AddPaymentInfo — dados de pagamento</option>
+        <option value="InitiateCheckout">InitiateCheckout — iniciou checkout</option>
+        <option value="Purchase">Purchase — compra realizada</option>
+        <option value="CompleteRegistration">CompleteRegistration — cadastro</option>
+        <option value="ViewContent">ViewContent — visualizou conteúdo</option>
+      </select>
+      <div style="font-size:.68rem;color:var(--mut);margin-top:5px">Quando o cliente entrar nesta etapa, este evento é disparado automaticamente para o Pixel Meta.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Como o cliente entra nesta etapa</label>
+      <select class="form-input" id="jmTriggerType" onchange="checkJourneyTrigger()">
+        <option value="keyword">Detectar frase/palavra-chave na mensagem</option>
+        <option value="auto_first">Automático — primeira mensagem recebida</option>
+        <option value="auto_second">Automático — segunda mensagem em diante</option>
+        <option value="manual">Manual — operador move o lead</option>
+      </select>
+    </div>
+
+    <div id="jmKeywordsGroup" class="form-group">
+      <label class="form-label">Frases ou palavras-chave <span style="color:var(--mut);font-weight:400">(separe por vírgula)</span></label>
+      <textarea class="form-input" id="jmKeywords" rows="3" placeholder="Ex: paguei, comprei, pix enviado, pedido confirmado, muito obrigado pela compra" style="resize:vertical;min-height:70px"></textarea>
+      <div style="font-size:.68rem;color:var(--mut);margin-top:5px;line-height:1.5">
+        O FlowBot detecta se <strong>qualquer trecho</strong> da mensagem contém uma dessas frases — não precisa ser exata.
+      </div>
+    </div>
+
+    <!-- Campos extras para Purchase -->
+    <div id="jmPurchaseFields" style="display:none;background:var(--blue-xl);border:1.5px solid var(--blue-m);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.78rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Dados de compra para o Pixel
+      </div>
+      <div style="font-size:.68rem;color:var(--mut);margin-bottom:10px;line-height:1.5">
+        Deixe o valor em branco para detectar automaticamente na mensagem (R$, "valor", "total", "pix de" etc).
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">Nome do produto</label>
+        <input class="form-input" id="jmProduct" placeholder="Ex: Mentoria Premium, Kit Completo..."/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Valor fixo (R$) <span style="color:var(--mut);font-weight:400">— opcional</span></label>
+          <input class="form-input" type="number" id="jmValue" placeholder="Ex: 297.00" step="0.01"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Moeda</label>
+          <select class="form-input" id="jmCurrency"><option value="BRL">BRL (Real)</option><option value="USD">USD (Dólar)</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ordem no funil</label>
+      <input class="form-input" type="number" id="jmOrder" placeholder="Ex: 1" min="1"/>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="save-btn" onclick="saveJourneyStep()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salvar etapa
+      </button>
+      <button class="sec-btn" style="padding:9px 16px" onclick="closeJourneyModal()">Cancelar</button>
+      <button class="sec-btn" style="padding:9px 16px;color:var(--red);border-color:rgba(232,93,93,.2);margin-left:auto" id="jmDeleteBtn" onclick="deleteJourneyStep()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ORDENAR ETAPAS ── -->
+<div class="modal-ov" id="sortModalOv">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-top">
+      <div><div class="modal-ttl"><div class="modal-ttl-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg></div>Ordenar Etapas</div></div>
+      <button class="modal-close" onclick="document.getElementById('sortModalOv').classList.remove('show')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="font-size:.76rem;color:var(--mut);margin-bottom:12px">Arraste as etapas para reordenar o funil:</div>
+    <div id="sortList" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="save-btn" onclick="saveSortOrder()">Salvar ordem</button>
+      <button class="sec-btn" style="padding:9px 16px" onclick="document.getElementById('sortModalOv').classList.remove('show')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL EVENTO ── -->
+<div class="modal-ov" id="eventoModalOv">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-top">
+      <div><div class="modal-ttl"><div class="modal-ttl-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><span id="eventoModalTitle">Novo Evento</span></div></div>
+      <button class="modal-close" onclick="closeEventoModal()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <input type="hidden" id="emEditId"/>
+    <div class="form-group">
+      <label class="form-label">Plataforma</label>
+      <select class="form-input" id="emPlatform">
+        <option value="meta">Meta Ads (Facebook/Instagram)</option>
+        <option value="google">Google Ads</option>
+        <option value="ambos">Meta + Google</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome do evento</label>
+      <select class="form-input" id="emName" onchange="checkPurchaseEvent()">
+        <option value="Contact">Contact — Primeiro contato</option>
+        <option value="Lead">Lead — Demonstrou interesse</option>
+        <option value="Purchase">Purchase — Realizou compra</option>
+        <option value="AddToCart">AddToCart — Adicionou ao carrinho</option>
+        <option value="AddPaymentInfo">AddPaymentInfo — Informou dados de pagamento</option>
+        <option value="InitiateCheckout">InitiateCheckout — Iniciou checkout</option>
+        <option value="CompleteRegistration">CompleteRegistration — Completou cadastro</option>
+        <option value="ViewContent">ViewContent — Visualizou conteúdo</option>
+        <option value="custom">Personalizado...</option>
+      </select>
+    </div>
+    <div class="form-group" id="customNameGroup" style="display:none">
+      <label class="form-label">Nome personalizado do evento</label>
+      <input class="form-input" id="emCustomName" placeholder="Ex: MeuEvento"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Frases ou palavras-chave <span style="color:var(--mut);font-weight:400">(separe por vírgula)</span></label>
+      <textarea class="form-input" id="emKeywords" rows="3" placeholder="Ex: muito obrigado pela sua compra, paguei agora, pix enviado, pedido confirmado, comprei" style="resize:vertical;min-height:70px"></textarea>
+      <div style="font-size:.68rem;color:var(--mut);margin-top:5px;line-height:1.5">
+        💡 O FlowBot detecta se <strong>qualquer trecho</strong> da mensagem contém uma dessas frases — não precisa ser exata.<br>
+        Exemplos: <em>"muito obrigado pela sua compra"</em> vai detectar <em>"Muito obrigado pela sua compra, adorei o atendimento!"</em>
+      </div>
+    </div>
+    <!-- Purchase fields -->
+    <div id="purchaseFields" style="display:none;background:var(--blue-xl);border:1.5px solid var(--blue-m);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.78rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Valor da compra para o Pixel
+      </div>
+      <div style="font-size:.68rem;color:var(--mut);margin-bottom:10px;line-height:1.5">
+        Se você deixar o valor em branco, o FlowBot vai tentar identificar o valor automaticamente na mensagem buscando por <strong>R$, "valor", "pagamento", "total"</strong> etc. Se configurar um valor fixo, ele sempre usa esse valor.
+      </div>
+      <div class="form-group" style="margin-bottom:10px"><label class="form-label">Nome do produto</label><input class="form-input" id="emProduct" placeholder="Ex: Mentoria Premium, Kit Completo..."/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Valor fixo (R$) <span style="color:var(--mut);font-weight:400">— deixe vazio para detectar automaticamente</span></label>
+          <input class="form-input" type="number" id="emValue" placeholder="Ex: 297.00 (opcional)" step="0.01"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Moeda</label><select class="form-input" id="emCurrency"><option value="BRL">BRL (Real)</option><option value="USD">USD (Dólar)</option></select></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="save-btn" onclick="saveEvento()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salvar evento
+      </button>
+      <button class="sec-btn" style="padding:9px 16px" onclick="closeEventoModal()">Cancelar</button>
+      <button class="sec-btn" style="padding:9px 16px;color:var(--red);border-color:rgba(232,93,93,.2);margin-left:auto" id="emDeleteBtn" onclick="deleteEvento()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="server-offline" id="serverStatus">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  Servidor offline — execute <code style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:4px;font-family:monospace">node src/server.js</code> para conectar
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://flowbot-production-2d32.up.railway.app';
+
+// ── ESTADO GLOBAL ──
+let serverOnline = false;
+let pollingActive = false;
+
+// ── API HELPER ──
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// ── VERIFICA SE SERVIDOR ESTÁ ONLINE ──
+async function checkServer() {
+  try {
+    await fetch(`${API}/funnel/stats`, { signal: AbortSignal.timeout(3000) });
+    if (!serverOnline) {
+      serverOnline = true;
+      document.getElementById('serverStatus').style.display = 'none';
+      console.log('✅ Servidor online');
+    }
+    return true;
+  } catch(e) {
+    if (serverOnline) {
+      serverOnline = false;
+      document.getElementById('serverStatus').style.display = 'flex';
+      console.warn('⚠️ Servidor offline');
+    }
+    return false;
+  }
+}
+
+// ── POLLING GLOBAL: funil + conversas + pixel logs + KPIs ──
+async function runPolling() {
+  if (!serverOnline) return;
+  // 1. Funil stats
+  try {
+    const d = await api('GET', '/funnel/stats');
+    if (d.stats) { funnelStats = d.stats; renderFunnel(); updateKPIs(); }
+  } catch(e) {}
+  // 2. Conversas reais do WA
+  try {
+    const d = await api('GET', '/conversations');
+    if (d.conversations) {
+      mergeConversations(d.conversations);
+    }
+  } catch(e) {}
+  // 3. Pixel logs → atualiza página de pixel e KPI
+  try {
+    const d = await api('GET', '/pixel/logs');
+    if (d.logs) {
+      mergePixelLogs(d.logs);
+    }
+  } catch(e) {}
+}
+
+function updateKPIs() {
+  const sorted = [...journeySteps].sort((a,b)=>a.order-b.order);
+  const firstStep = sorted[0];
+  const lastStep  = sorted[sorted.length-1];
+  const contactCount  = firstStep ? (funnelStats[firstStep.id] || 0) : 0;
+  const purchaseCount = lastStep  ? (funnelStats[lastStep.id]  || 0) : 0;
+  const pct = (n) => contactCount > 0 ? Math.round((n / contactCount) * 100) : 0;
+  document.getElementById('kpi-conv').textContent = contactCount;
+  document.getElementById('kpi-conv-sub').textContent = contactCount > 0
+    ? `${purchaseCount} compraram (${pct(purchaseCount)}%)`
+    : 'Nenhuma conversa ainda';
+  if (purchaseCount > 0) {
+    const ev  = journeySteps.find(s => s.event === 'Purchase');
+    const val = ev?.fixedValue ? parseFloat(ev.fixedValue) * purchaseCount : 0;
+    if (val > 0) {
+      document.getElementById('kpi-rev').textContent = 'R$ ' + val.toLocaleString('pt-BR',{minimumFractionDigits:2});
+      document.getElementById('kpi-rev-sub').textContent = `${purchaseCount} venda${purchaseCount>1?'s':''}`;
+      document.getElementById('kpi-rev-tag').className = 'tag up';
+      document.getElementById('kpi-rev-tag').textContent = '+' + pct(purchaseCount) + '%';
+    }
+  }
+  document.getElementById('kpi-pixel').textContent = pixelLogs.filter(p=>p.sent).length;
+  document.getElementById('kpi-clicks').textContent = linksData.reduce((a,l)=>a+(l.clicks||0),0);
+}
+
+// ── INIT ──
+window.addEventListener('load', async () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (user.email) {
+    document.getElementById('userAv').textContent = user.email.substring(0,2).toUpperCase();
+    document.getElementById('userName').textContent = user.email;
+  }
+  loadSettings();
+  initJourney();
+  initEventos();
+  initPixel();
+  initConvs();
+  initLinks();
+  initFunnel();
+  checkWAOnLoad();
+  // Verifica servidor e inicia polling
+  await checkServer();
+  if (serverOnline) { runPolling(); }
+  // Polling a cada 8s
+  setInterval(async () => {
+    await checkServer();
+    if (serverOnline) runPolling();
+  }, 8000);
+});
+
+function doLogout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = 'login.html';
+}
+
+// ── NAV ──
+const titles = {dash:'Dashboard',conv:'Conversas',links:'Links Rastreáveis',journey:'Jornada de Compra',eventos:'Eventos de Conversão',pixel:'Disparos de Pixel',conn:'Conexões',settings:'Configurações'};
+const breads = {dash:'Início · Visão geral',conv:'Início · Conversas',links:'Início · Links Rastreáveis',journey:'Início · Jornada de Compra',eventos:'Início · Eventos de Conversão',pixel:'Início · Disparos de Pixel',conn:'Início · Conexões',settings:'Início · Configurações'};
+
+function goTo(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('pageTitle').textContent = titles[id] || id;
+  document.getElementById('pageBread').textContent = breads[id] || '';
+  closeSB();
+}
+function toggleSB() { document.getElementById('sb').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
+function closeSB() { document.getElementById('sb').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); }
+function closeModal() { document.getElementById('modalOv').classList.remove('show'); }
+
+// ── SETTINGS ──
+async function loadSettings() {
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  // Restaura pixel config no servidor ao carregar
+  if (s.pixelId && s.token) {
+    try {
+      await fetch(`${API}/pixel/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pixelId: s.pixelId, token: s.token, adAccount: s.adAccount || '' })
+      });
+    } catch(e) {}
+  }
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (s.name) document.getElementById('sName').value = s.name;
+  if (s.phone) document.getElementById('sPhone').value = s.phone;
+  if (s.welcome) document.getElementById('sWelcome').value = s.welcome;
+  if (user.email) { document.getElementById('sEmail').value = user.email; document.getElementById('settingsEmail').textContent = user.email; }
+  if (s.name) document.getElementById('settingsName').textContent = s.name;
+  // conn page
+  if (s.pixelId) {
+    document.getElementById('metaPixelId').textContent = s.pixelId;
+    if (document.getElementById('sPixelId')) document.getElementById('sPixelId').value = s.pixelId;
+    updateMetaStatus(true);
+  }
+  if (s.token) {
+    document.getElementById('metaToken').textContent = s.token.substring(0,16)+'...';
+    if (document.getElementById('sToken')) document.getElementById('sToken').value = s.token;
+  }
+  if (s.adAccount) {
+    document.getElementById('metaAdAccount').textContent = s.adAccount;
+    if (document.getElementById('sAdAccount')) document.getElementById('sAdAccount').value = s.adAccount;
+  }
+  // Mostra botão Testar se configurado
+  if (s.pixelId && s.token) {
+    const tb = document.getElementById('metaTestBtn');
+    if (tb) tb.style.display = 'flex';
+    const fb = document.getElementById('metaFormTestBtn');
+    if (fb) fb.style.display = 'inline-flex';
+  }
+  if (s.googleId) { document.getElementById('googleId').textContent = s.googleId; document.getElementById('sGoogleId') && (document.getElementById('sGoogleId').value = s.googleId); updateGoogleStatus(true); }
+  if (s.googleConvId) { document.getElementById('googleConvId').textContent = s.googleConvId; document.getElementById('sGoogleConvId') && (document.getElementById('sGoogleConvId').value = s.googleConvId); }
+  if (s.googleLabel) { document.getElementById('googleLabel').textContent = s.googleLabel; document.getElementById('sGoogleLabel') && (document.getElementById('sGoogleLabel').value = s.googleLabel); }
+  const code = localStorage.getItem('fb_user_code') || generateCode();
+  document.getElementById('clientCode').textContent = code;
+  document.getElementById('webhookUrl').textContent = `${API}/webhook/conversa-criada?code=${code}`;
+  document.getElementById('webhookUrl2').textContent = `${API}/webhook/conversa-alterada?code=${code}`;
+  document.getElementById('pixelScript').textContent = `<script>\n  (function(w,d,s){\n    w.fb=w.fb||{};\n    w.fb.code='${code}';\n    var el=d.createElement(s);\n    el.src='https://flowbot-woad.vercel.app/pixel.js';\n    d.head.appendChild(el);\n  })(window,document,'script');\n<\/script>`;
+  // wa number
+  if (s.phone) document.getElementById('waNumber').textContent = s.phone;
+}
+function generateCode() {
+  const c = Math.random().toString(36).substring(2,12);
+  localStorage.setItem('fb_user_code', c);
+  return c;
+}
+function saveSettings() {
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  s.name = document.getElementById('sName').value;
+  s.phone = document.getElementById('sPhone').value;
+  s.welcome = document.getElementById('sWelcome').value;
+  localStorage.setItem('fb_settings', JSON.stringify(s));
+  if (s.name) document.getElementById('settingsName').textContent = s.name;
+  if (s.phone) document.getElementById('waNumber').textContent = s.phone;
+  showToast('Perfil salvo com sucesso!');
+}
+function changePassword() {
+  const np = document.getElementById('sNewPass').value;
+  const cp = document.getElementById('sConfPass').value;
+  if (!np) { showToast('Digite a nova senha'); return; }
+  if (np !== cp) { showToast('Senhas não coincidem'); return; }
+  if (np.length < 6) { showToast('Senha deve ter mínimo 6 caracteres'); return; }
+  showToast('Senha alterada! (conecte ao Supabase para salvar)');
+}
+async function saveMetaSettings() {
+  const pixelId   = document.getElementById('sPixelId').value.trim();
+  const token     = document.getElementById('sToken').value.trim();
+  const adAccount = document.getElementById('sAdAccount').value.trim();
+  if (!pixelId) { showMetaFormResult('error', '⚠️ Preencha o Pixel ID'); return; }
+  if (!token)   { showMetaFormResult('error', '⚠️ Preencha o Token de Acesso'); return; }
+  if (pixelId.length < 10 || !/^\d+$/.test(pixelId)) { showMetaFormResult('error', '⚠️ Pixel ID inválido — deve conter apenas números'); return; }
+
+  const btn = document.getElementById('metaSaveBtn');
+  btn.innerHTML = '<div style="width:13px;height:13px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;margin-right:6px"></div> Salvando...';
+  btn.disabled = true;
+
+  // 1. Salva localmente
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  s.pixelId = pixelId; s.token = token; s.adAccount = adAccount;
+  localStorage.setItem('fb_settings', JSON.stringify(s));
+
+  // Atualiza card imediatamente
+  document.getElementById('metaPixelId').textContent = pixelId;
+  document.getElementById('metaToken').textContent   = token.substring(0,16)+'...';
+  document.getElementById('metaAdAccount').textContent = adAccount || '—';
+  document.getElementById('sToken').type = 'password'; // mascara de volta
+
+  // 2. Envia ao servidor
+  let serverOk = false;
+  try {
+    const r = await fetch(`${API}/pixel/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pixelId, token, adAccount })
+    });
+    const d = await r.json();
+    serverOk = !!d.success;
+    if (!serverOk) showMetaFormResult('error', '❌ Servidor retornou erro: ' + (d.error || 'desconhecido'));
+  } catch(err) {
+    showMetaFormResult('warn', '⚠️ Servidor offline — credenciais salvas localmente. Serão enviadas ao reiniciar o servidor.');
+  }
+
+  updateMetaStatus(true);
+  document.getElementById('metaFormTestBtn').style.display = 'inline-flex';
+
+  // 3. Testa a conexão com a Meta se servidor OK
+  if (serverOk) {
+    showMetaFormResult('info', '🔄 Testando conexão com a Meta...');
+    await testPixelConnection(pixelId, token, true);
+  }
+
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar e ativar Pixel';
+  btn.disabled = false;
+}
+
+function showMetaFormResult(type, msg) {
+  const el = document.getElementById('metaFormTestResult');
+  if (!el) return;
+  const styles = {
+    ok:    'background:rgba(46,204,138,.1);border:1.5px solid rgba(46,204,138,.3);color:#1a9e65',
+    error: 'background:rgba(232,93,93,.08);border:1.5px solid rgba(232,93,93,.25);color:#c0392b',
+    warn:  'background:rgba(245,166,35,.1);border:1.5px solid rgba(245,166,35,.3);color:#b7770d',
+    info:  'background:var(--blue-xl);border:1.5px solid var(--blue-m);color:var(--blue-d)',
+  };
+  el.style.cssText = styles[type] || styles.info;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function showMetaCardResult(type, msg) {
+  const el = document.getElementById('metaTestResult');
+  if (!el) return;
+  const styles = {
+    ok:    'background:rgba(46,204,138,.1);border:1.5px solid rgba(46,204,138,.3);color:#1a9e65',
+    error: 'background:rgba(232,93,93,.08);border:1.5px solid rgba(232,93,93,.25);color:#c0392b',
+    info:  'background:var(--blue-xl);border:1.5px solid var(--blue-m);color:var(--blue-d)',
+  };
+  el.style.cssText = styles[type] || styles.info;
+  el.textContent = msg;
+  el.style.display = 'block';
+  // Auto-hide ok/info após 6s
+  if (type === 'ok' || type === 'info') setTimeout(() => { el.style.display='none'; }, 8000);
+}
+
+function toggleTokenVisibility() {
+  const inp = document.getElementById('sToken');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// Testar pixel a partir do botão do card (fora do formulário)
+async function runPixelTest() {
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  if (!s.pixelId || !s.token) { showToast('Configure o Pixel primeiro'); return; }
+  const btn = document.getElementById('metaTestBtn');
+  btn.innerHTML = '<div style="width:12px;height:12px;border:2px solid var(--blue-m);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;margin-right:4px"></div> Testando...';
+  btn.disabled = true;
+  showMetaCardResult('info', '🔄 Enviando evento de teste para a Meta...');
+  await testPixelConnection(s.pixelId, s.token, false);
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Testar Pixel';
+  btn.disabled = false;
+}
+
+// Testar pixel a partir do formulário
+async function runPixelTestFromForm() {
+  const pixelId = document.getElementById('sPixelId').value.trim();
+  const token   = document.getElementById('sToken').value.trim();
+  if (!pixelId || !token) { showMetaFormResult('error', '⚠️ Preencha o Pixel ID e o Token antes de testar'); return; }
+  const btn = document.getElementById('metaFormTestBtn');
+  btn.innerHTML = '<div style="width:12px;height:12px;border:2px solid var(--blue-m);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;margin-right:4px"></div> Testando...';
+  btn.disabled = true;
+  showMetaFormResult('info', '🔄 Enviando evento de teste para a Meta...');
+  await testPixelConnection(pixelId, token, true);
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Testar conexão';
+  btn.disabled = false;
+}
+
+async function testPixelConnection(pixelId, token, inForm = false) {
+  const show = inForm ? showMetaFormResult : showMetaCardResult;
+  try {
+    const r = await fetch(`${API}/pixel/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pixelId, token })
+    });
+    const d = await r.json();
+    if (d.success) {
+      const evCount = d.events_received || 1;
+      show('ok', `✅ Pixel testado! Meta recebeu ${evCount} evento${evCount>1?'s':''}. Pixel ID ${pixelId} está ativo.`);
+      showMetaCardResult('ok', `✅ Pixel ID ${pixelId} ativo — último teste: ${new Date().toLocaleTimeString('pt-BR')}`);
+      // Atualiza campo "último disparo" no card
+      document.getElementById('metaLastFiredWrap').style.display = 'flex';
+      document.getElementById('metaLastFired').textContent = 'Teste · ' + new Date().toLocaleTimeString('pt-BR');
+    } else {
+      const errMsg = d.error || 'Resposta inesperada da Meta';
+      show('error', '❌ Teste falhou: ' + errMsg.substring(0,120));
+      if (!inForm) showMetaCardResult('error', '❌ Teste falhou: ' + errMsg.substring(0,80));
+    }
+  } catch(e) {
+    show('warn', '⚠️ Não foi possível testar — servidor offline. O pixel será disparado quando o servidor estiver rodando.');
+  }
+}
+
+// Pixel polling integrado no runPolling() global
+function saveGoogleSettings() {
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  s.googleId = document.getElementById('sGoogleId').value;
+  s.googleConvId = document.getElementById('sGoogleConvId').value;
+  s.googleLabel = document.getElementById('sGoogleLabel').value;
+  localStorage.setItem('fb_settings', JSON.stringify(s));
+  if (s.googleId) {
+    document.getElementById('googleId').textContent = s.googleId;
+    document.getElementById('googleConvId').textContent = s.googleConvId;
+    document.getElementById('googleLabel').textContent = s.googleLabel;
+    updateGoogleStatus(true);
+  }
+  document.getElementById('googleConfigBox').style.display = 'none';
+  showToast('Google Ads configurado!');
+}
+function updateMetaStatus(ok) {
+  document.getElementById('metaDot').className   = ok ? 'cdot on' : 'cdot off';
+  document.getElementById('metaTxt').textContent = ok ? 'Pixel ativo ✓' : 'Não configurado';
+  document.getElementById('metaTxt').style.color = ok ? 'var(--grn)' : 'var(--mut)';
+  document.getElementById('metaConnBtn').innerHTML = ok
+    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Reconfigurar'
+    : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Configurar';
+  document.getElementById('metaConnBtn').className = ok ? 'conn-btn configured' : 'conn-btn connect';
+  // Mostra botão Testar Pixel quando configurado
+  const testBtn = document.getElementById('metaTestBtn');
+  if (testBtn) testBtn.style.display = ok ? 'flex' : 'none';
+  // Mostra botão Testar no formulário quando configurado
+  const formTestBtn = document.getElementById('metaFormTestBtn');
+  if (formTestBtn) formTestBtn.style.display = ok ? 'inline-flex' : 'none';
+}
+function updateGoogleStatus(ok) {
+  document.getElementById('googleDot').className = ok ? 'cdot on' : 'cdot off';
+  document.getElementById('googleTxt').textContent = ok ? 'Configurado' : 'Não configurado';
+  document.getElementById('googleTxt').style.color = ok ? 'var(--grn)' : 'var(--mut)';
+  document.getElementById('googleConnBtn').textContent = ok ? 'Reconfigurar' : 'Configurar Google Ads';
+  document.getElementById('googleConnBtn').className = ok ? 'conn-btn configured' : 'conn-btn connect';
+}
+function openMetaConfig() { document.getElementById('metaConfigBox').style.display = 'block'; document.getElementById('googleConfigBox').style.display = 'none'; }
+function openGoogleConfig() { document.getElementById('googleConfigBox').style.display = 'block'; document.getElementById('metaConfigBox').style.display = 'none'; }
+function copyWebhook() { navigator.clipboard.writeText(document.getElementById('webhookUrl').textContent); showToast('Webhook copiado!'); }
+function copyPixelScript() { navigator.clipboard.writeText(document.getElementById('pixelScript').textContent); showToast('Script copiado!'); }
+
+// ── SETTINGS TABS ──
+function showSettingsTab(id, btn) {
+  ['conta','app','notif','integr'].forEach(t => { document.getElementById('stab-'+t).style.display = 'none'; });
+  document.getElementById('stab-'+id).style.display = 'block';
+  document.querySelectorAll('#settingsTabs .ptab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── THEME ──
+function setTheme(t) {
+  if (t === 'dark') {
+    document.documentElement.style.setProperty('--bg','#111827');
+    document.documentElement.style.setProperty('--sur','#1e2a3a');
+    document.documentElement.style.setProperty('--bdr','#2a3a52');
+    document.documentElement.style.setProperty('--txt','#e8f0fe');
+    document.documentElement.style.setProperty('--mut','#7a90b5');
+    document.documentElement.style.setProperty('--blue-xl','#1a2540');
+    document.documentElement.style.setProperty('--blue-l','#1e3560');
+    document.getElementById('themeDark').style.borderColor = 'var(--blue)';
+    document.getElementById('themeLight').style.borderColor = 'var(--bdr)';
+  } else {
+    document.documentElement.style.setProperty('--bg','#f0f6ff');
+    document.documentElement.style.setProperty('--sur','#fff');
+    document.documentElement.style.setProperty('--bdr','#dce8fb');
+    document.documentElement.style.setProperty('--txt','#1a2540');
+    document.documentElement.style.setProperty('--mut','#7a90b5');
+    document.documentElement.style.setProperty('--blue-xl','#f0f6ff');
+    document.documentElement.style.setProperty('--blue-l','#e8f1fe');
+    document.getElementById('themeLight').style.borderColor = 'var(--blue)';
+    document.getElementById('themeDark').style.borderColor = 'var(--bdr)';
+  }
+  localStorage.setItem('fb_theme', t);
+  showToast('Tema ' + (t==='dark'?'escuro':'claro') + ' ativado!');
+}
+function setAccent(color) {
+  document.documentElement.style.setProperty('--blue', color);
+  document.querySelectorAll('#accentColors div').forEach(d => d.style.border = '3px solid transparent');
+  event.target.style.border = '3px solid var(--txt)';
+  localStorage.setItem('fb_accent', color);
+}
+function togglePref(key, el) {
+  el.classList.toggle('on');
+  const prefs = JSON.parse(localStorage.getItem('fb_prefs') || '{}');
+  prefs[key] = el.classList.contains('on');
+  localStorage.setItem('fb_prefs', JSON.stringify(prefs));
+}
+
+// ── WHATSAPP REAL ──
+let waConnected = false;
+let waInstanceName = localStorage.getItem('fb_wa_instance') || null;
+let waStatusInterval = null;
+
+async function toggleWA() {
+  if (waConnected) {
+    await disconnectWA();
+  } else {
+    await connectWA();
+  }
+}
+
+let waConnectMethod = 'qr'; // 'qr' | 'pairing'
+
+function setWAMethod(method, btn) {
+  waConnectMethod = method;
+  document.querySelectorAll('#waMethodSel .df-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('waPairingInput').style.display = method === 'pairing' ? 'block' : 'none';
+  document.getElementById('qrBox').style.display = 'none';
+}
+
+async function connectWA() {
+  const btn    = document.getElementById('waConnBtn');
+  const qrBox  = document.getElementById('qrBox');
+  const user   = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id || user.sub || 'default';
+
+  btn.innerHTML = '<div style="width:14px;height:14px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;margin-right:6px"></div> Conectando...';
+  btn.disabled = true;
+  qrBox.style.display = 'block';
+  qrBox.innerHTML = `<div style="text-align:center;padding:20px;color:var(--mut);font-size:.78rem">
+    <div style="width:32px;height:32px;border:3px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>
+    ${waConnectMethod === 'qr' ? 'Gerando QR Code...' : 'Solicitando código de pareamento...'}
+  </div>`;
+
+  try {
+    const phone = waConnectMethod === 'pairing' ? document.getElementById('waPairingPhone').value.trim() : null;
+    if (waConnectMethod === 'pairing' && !phone) {
+      showToast('Digite o número do WhatsApp');
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Conectar WhatsApp';
+      btn.disabled = false; return;
+    }
+
+    const res  = await fetch(`${API}/whatsapp/connect`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, method: waConnectMethod, phone })
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      qrBox.innerHTML = `<div style="text-align:center;padding:16px;color:var(--red);font-size:.78rem">❌ ${data.error}<br><br><span style="color:var(--mut);font-size:.7rem">Verifique se o servidor Node.js está rodando e o Docker com Evolution API está ativo.</span></div>`;
+      btn.innerHTML = '↺ Tentar novamente'; btn.disabled = false; return;
+    }
+
+    waInstanceName = data.instanceName;
+    localStorage.setItem('fb_wa_instance', waInstanceName);
+
+    // Configura webhook automaticamente (não bloqueia)
+    fetch(`${API}/whatsapp/setup-webhook`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instanceName: waInstanceName })
+    }).catch(() => {});
+
+    if (data.pairingCode) {
+      // Exibe o código de pareamento
+      qrBox.innerHTML = `
+        <div style="text-align:center;padding:12px">
+          <div style="font-size:.75rem;color:var(--mut);margin-bottom:10px">Abra o WhatsApp → Aparelhos conectados → Conectar com número</div>
+          <div style="font-size:2.2rem;font-weight:900;letter-spacing:10px;color:var(--blue-d);font-family:monospace;background:var(--blue-xl);padding:14px 20px;border-radius:12px;border:2px solid var(--blue-m)">${data.pairingCode}</div>
+          <div style="font-size:.68rem;color:var(--mut2);margin-top:8px">Digite este código no WhatsApp do número <strong>${phone}</strong></div>
+          <div style="font-size:.65rem;color:var(--mut2);margin-top:3px">Expira em ~3 minutos</div>
+        </div>`;
+      btn.innerHTML = '⏳ Aguardando pareamento...'; btn.disabled = true;
+      startWAStatusCheck();
+    } else if (data.qrcode) {
+      const src = data.qrcode.startsWith('data:') ? data.qrcode : `data:image/png;base64,${data.qrcode}`;
+      qrBox.innerHTML = `
+        <div style="text-align:center">
+          <img src="${src}" style="width:196px;height:196px;border-radius:12px;display:block;margin:0 auto;border:3px solid var(--blue-m)"/>
+          <div style="font-size:.72rem;color:var(--mut);margin-top:10px;font-weight:600">Abra o WhatsApp → ⋮ → Aparelhos conectados → Conectar</div>
+          <div style="font-size:.65rem;color:var(--mut2);margin-top:4px">QR Code expira em ~60 segundos</div>
+        </div>`;
+      btn.innerHTML = '⏳ Aguardando leitura do QR...'; btn.disabled = true;
+      startWAStatusCheck();
+      // Inicia contagem regressiva para auto-refresh do QR
+      setTimeout(() => {
+        if (!waConnected) {
+          qrBox.innerHTML += `<div style="text-align:center;margin-top:8px"><button class="df-btn" onclick="connectWA()" style="font-size:.72rem">🔄 Gerar novo QR</button></div>`;
+        }
+      }, 55000);
+    } else {
+      qrBox.innerHTML = `<div style="text-align:center;padding:16px;color:var(--mut);font-size:.78rem">⚠️ Conexão iniciada. Verificando status...</div>`;
+      btn.innerHTML = '⏳ Verificando...'; btn.disabled = true;
+      startWAStatusCheck();
+    }
+  } catch (err) {
+    qrBox.innerHTML = `<div style="text-align:center;padding:16px;color:var(--red);font-size:.78rem">❌ Servidor offline.<br><span style="font-size:.7rem;color:var(--mut)">Execute: <code>node src/server.js</code></span></div>`;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Conectar WhatsApp';
+    btn.disabled = false;
+  }
+}
+
+function startWAStatusCheck() {
+  if (waStatusInterval) clearInterval(waStatusInterval);
+  let attempts = 0;
+  waStatusInterval = setInterval(async () => {
+    attempts++;
+    if (attempts > 24) { // 2 minutos
+      clearInterval(waStatusInterval);
+      setWADisconnected();
+      showToast('QR Code expirou. Tente novamente.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/whatsapp/status/${waInstanceName}`);
+      const data = await res.json();
+      if (data.connected) {
+        clearInterval(waStatusInterval);
+        setWAConnected(data.number);
+      }
+    } catch(e) {}
+  }, 5000);
+}
+
+function setWAConnected(number) {
+  waConnected = true;
+  document.getElementById('waDot').className = 'wa-dot on';
+  document.getElementById('waStatusTxt').textContent = 'WhatsApp Conectado';
+  document.getElementById('waStatusBtn').className = 'wa-status connected';
+  document.getElementById('waConnTxt').textContent = 'Conectado ✓';
+  document.getElementById('waConnTxt').style.color = 'var(--grn)';
+  document.getElementById('waConnDot').className = 'cdot on';
+  document.getElementById('waConnBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Desconectar';
+  document.getElementById('waConnBtn').className = 'conn-btn disconnect';
+  document.getElementById('waConnBtn').disabled = false;
+  document.getElementById('qrBox').style.display = 'none';
+  document.getElementById('waMethodSel').style.display = 'none';
+  document.getElementById('waPairingInput').style.display = 'none';
+  document.getElementById('waNumber').textContent = number || 'Conectado';
+  if (number) localStorage.setItem('fb_wa_number', number);
+  localStorage.setItem('fb_wa_connected', '1');
+  // Sincroniza pixel config ao conectar WA (por garantia)
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  if (s.pixelId && s.token) {
+    fetch(`${API}/pixel/config`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pixelId: s.pixelId, token: s.token, adAccount: s.adAccount||'' })
+    }).catch(()=>{});
+  }
+  showToast('✅ WhatsApp conectado! Aguardando mensagens...');
+  if (salesChartVisible) renderSalesChart();
+}
+
+function setWADisconnected() {
+  waConnected = false;
+  document.getElementById('waDot').className = 'wa-dot off';
+  document.getElementById('waStatusTxt').textContent = 'WhatsApp Desconectado';
+  document.getElementById('waStatusBtn').className = 'wa-status disconnected';
+  document.getElementById('waConnTxt').textContent = 'Desconectado';
+  document.getElementById('waConnTxt').style.color = 'var(--mut)';
+  document.getElementById('waConnDot').className = 'cdot off';
+  document.getElementById('waConnBtn').innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Conectar WhatsApp';
+  document.getElementById('waConnBtn').className = 'conn-btn connect';
+  document.getElementById('waConnBtn').disabled = false;
+  document.getElementById('qrBox').style.display = 'none';
+  document.getElementById('waMethodSel').style.display = 'flex';
+  document.getElementById('waNumber').textContent = '—';
+  localStorage.removeItem('fb_wa_connected');
+}
+
+async function disconnectWA() {
+  if (!waInstanceName) { setWADisconnected(); return; }
+  try {
+    await fetch(`${API}/whatsapp/disconnect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instanceName: waInstanceName })
+    });
+  } catch(e) {}
+  setWADisconnected();
+  showToast('WhatsApp desconectado');
+}
+
+// Verifica status ao carregar a página
+async function checkWAOnLoad() {
+  if (!waInstanceName) return;
+  try {
+    const res = await fetch(`${API}/whatsapp/status/${waInstanceName}`);
+    const data = await res.json();
+    if (data.connected) setWAConnected(data.number);
+  } catch(e) {}
+}
+
+// ── CONVERSATIONS ──
+
+// ── CONVERSAS ──
+let convData    = [];
+let activeConv  = null;
+let lastConvIds = new Set();
+
+function initConvs() {
+  renderConvList([]);
+  if (serverOnline) loadConvs();
+}
+
+async function loadConvs() {
+  try {
+    const d = await api('GET', '/conversations');
+    if (d.conversations) mergeConversations(d.conversations);
+  } catch(e) {}
+}
+
+function mergeConversations(incoming) {
+  let changed = false;
+  incoming.forEach(conv => {
+    const idx = convData.findIndex(c => c.id === conv.id);
+    if (idx >= 0) {
+      // Atualiza msgs e stage
+      const prev = convData[idx];
+      if (conv.msgs?.length !== prev.msgs?.length || conv.stage !== prev.stage) {
+        convData[idx] = conv; changed = true;
+        if (activeConv === conv.id) openConv(conv.id);
+      }
+    } else {
+      convData.unshift(conv); changed = true;
+      // Badge de nova conversa na nav
+      const badge = document.getElementById('convBadge');
+      if (badge) { badge.textContent = convData.length; badge.style.display='inline-block'; }
+    }
+  });
+  if (changed) renderConvList(convData);
+}
+
+const stageColorMap = { 'Comprou':'var(--grn)', 'Fez Contato':'var(--blue)', 'Lead':'var(--org)', 'Cancelamento':'var(--red)', 'Oferta':'var(--org)' };
+const stagePillMap  = { 'Comprou':'purchase', 'Fez Contato':'contact', 'Lead':'lead', 'Cancelamento':'canceled' };
+
+function renderConvList(data) {
+  const el = document.getElementById('convListEl');
+  if (!data.length) {
+    el.innerHTML = `<div style="padding:40px 16px;text-align:center;color:var(--mut2);font-size:.78rem">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-m)" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 10px;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Nenhuma conversa ainda.<br>Conecte o WhatsApp para receber mensagens.</div>`;
+    return;
+  }
+  el.innerHTML = data.map(conv => {
+    const lastMsg  = conv.msgs?.[conv.msgs.length-1];
+    const timeStr  = conv.lastTime || conv.time || '';
+    const stageTxt = conv.stage || 'Novo';
+    const unread   = conv.unread > 0 ? `<span style="min-width:18px;height:18px;background:var(--blue);color:#fff;border-radius:50%;font-size:.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${conv.unread}</span>` : '';
+    return `<div class="conv-item${activeConv===conv.id?' active':''}" onclick="openConv('${conv.id}')">
+      <div class="conv-name">${conv.name || conv.phone}<span class="conv-time">${timeStr}</span></div>
+      <div class="conv-phone">${conv.phone}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;gap:6px">
+        <div class="conv-preview" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsg?.txt || '...'}</div>
+        ${unread}
+        <span style="font-size:.6rem;font-weight:700;color:${stageColorMap[stageTxt]||'var(--mut)'};flex-shrink:0">${stageTxt}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openConv(id) {
+  activeConv = id;
+  const conv = convData.find(x => x.id == id);
+  if (!conv) return;
+  conv.unread = 0;
+  document.getElementById('convName').textContent    = conv.name || conv.phone;
+  document.getElementById('convPhone').textContent   = conv.phone;
+  document.getElementById('convStage').innerHTML     = `<span class="pill ${stagePillMap[conv.stage]||'meta'}">${conv.stage||'Novo'}</span>`;
+  const msgs = conv.msgs || [];
+  document.getElementById('convMsgs').innerHTML = msgs.map(m => {
+    const pixelTag = m.pixelEvent ? `<div class="msg-tag lead"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Pixel: ${m.pixelEvent}</div>` : '';
+    return `<div style="display:flex;flex-direction:column;align-items:${m.dir==='in'?'flex-start':'flex-end'}">
+      <div class="msg ${m.dir}">${escHtml(m.txt)}<div class="msg-time">${m.time||''}</div></div>
+      ${pixelTag}
+    </div>`;
+  }).join('');
+  document.getElementById('convMsgs').scrollTop = 999999;
+  renderConvList(convData);
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function filterConvs(q) {
+  const t = q.toLowerCase();
+  renderConvList(convData.filter(c => (c.name||'').toLowerCase().includes(t) || (c.phone||'').includes(t)));
+}
+
+async function sendMsg() {
+  const inp   = document.getElementById('msgInput');
+  const text  = inp.value.trim();
+  if (!text || !activeConv) return;
+  const conv  = convData.find(x => x.id == activeConv);
+  if (!conv) return;
+  const time  = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  // Adiciona localmente imediatamente
+  conv.msgs.push({ dir:'out', txt:text, time, status:'sending' });
+  inp.value = '';
+  openConv(activeConv);
+  // Envia ao servidor
+  if (serverOnline && waInstanceName) {
+    try {
+      await api('POST', '/whatsapp/send', {
+        instanceName: waInstanceName,
+        phone: conv.phone,
+        message: text
+      });
+      const lastMsg = conv.msgs[conv.msgs.length-1];
+      if (lastMsg) lastMsg.status = 'sent';
+      openConv(activeConv);
+    } catch(e) {
+      showToast('Erro ao enviar mensagem');
+      const lastMsg = conv.msgs[conv.msgs.length-1];
+      if (lastMsg) lastMsg.status = 'error';
+    }
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement?.id === 'msgInput') {
+    e.preventDefault(); sendMsg();
+  }
+});
+
+// ── LINKS ──
+let linksData = JSON.parse(localStorage.getItem('fb_links') || '[]');
+function initLinks() {
+  renderLinks();
+}
+function renderLinks() {
+  document.getElementById('linksCount').textContent = linksData.length + ' link' + (linksData.length!==1?'s ativos':' ativo');
+  if (!linksData.length) {
+    document.getElementById('linksEl').innerHTML = '<div style="text-align:center;padding:40px;color:var(--mut2);font-size:.8rem">Nenhum link criado ainda.</div>';
+    return;
+  }
+  const C = {meta:'var(--blue)',instagram:'var(--pur)',google:'var(--grn)',email:'var(--org)',organico:'var(--mut)'};
+  const BG = {meta:'var(--blue-l)',instagram:'rgba(124,111,245,.1)',google:'rgba(46,204,138,.1)',email:'rgba(245,166,35,.1)',organico:'rgba(168,188,218,.15)'};
+  document.getElementById('linksEl').innerHTML = linksData.map((l,i) => `
+    <div class="link-card">
+      <div class="lk-ico" style="background:${BG[l.source]||'var(--blue-l)'}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${C[l.source]||'var(--blue)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+      <div class="lk-info"><div class="lk-name">${l.name}</div><div class="lk-url">${l.url}</div></div>
+      <div class="lk-stats">
+        <div><div class="lks-val">${l.clicks||0}</div><div class="lks-lbl">Cliques</div></div>
+        <div><div class="lks-val" style="color:var(--grn)">${l.conv||0}</div><div class="lks-lbl">Conversas</div></div>
+      </div>
+      <div class="lk-actions">
+        <button class="ic-btn" onclick="copyLinkItem(${i})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--mut)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        <button class="ic-btn" onclick="deleteLink(${i})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div>
+    </div>`).join('');
+}
+function generateLink() {
+  const name = document.getElementById('lkName').value || 'Campanha';
+  const msg = encodeURIComponent(document.getElementById('lkMsg').value || 'Olá! Vim pelo link.');
+  const source = document.getElementById('lkSource').value;
+  const s = JSON.parse(localStorage.getItem('fb_settings') || '{}');
+  const phone = (s.phone || '5511999999999').replace(/\D/g,'');
+  const id = Math.random().toString(36).substring(2,8).toUpperCase();
+  const waUrl = `https://wa.me/${phone}?text=${msg}`;
+  const trackUrl = `https://flowbot-woad.vercel.app/r/${id}?utm_source=${source}&utm_campaign=${encodeURIComponent(name)}&redirect=${encodeURIComponent(waUrl)}`;
+  linksData.unshift({id,name,source,url:`flowbot.app/r/${id}`,fullUrl:trackUrl,clicks:0,conv:0,created:new Date().toLocaleDateString('pt-BR')});
+  localStorage.setItem('fb_links', JSON.stringify(linksData));
+  renderLinks();
+  document.getElementById('mLkName').textContent = name;
+  document.getElementById('mLkSrc').textContent = source;
+  document.getElementById('mLkUrl').textContent = trackUrl;
+  document.getElementById('modalOv').classList.add('show');
+}
+function copyModalLink() { navigator.clipboard.writeText(document.getElementById('mLkUrl').textContent); showToast('Link copiado!'); }
+function copyLinkItem(i) { navigator.clipboard.writeText(linksData[i].fullUrl||linksData[i].url); showToast('Link copiado!'); }
+function deleteLink(i) { linksData.splice(i,1); localStorage.setItem('fb_links',JSON.stringify(linksData)); renderLinks(); showToast('Link removido'); }
+
+// ── JOURNEY ──
+const _jCache = JSON.parse(localStorage.getItem('fb_journey') || 'null');
+const _jVersion = 2;
+const _jSavedVersion = localStorage.getItem('fb_journey_v') ? parseInt(localStorage.getItem('fb_journey_v')) : 0;
+if (_jSavedVersion < _jVersion) { localStorage.removeItem('fb_journey'); localStorage.setItem('fb_journey_v', _jVersion); }
+
+let journeySteps = (_jSavedVersion >= _jVersion && _jCache) ? _jCache : [
+  { id:1, order:1, name:'Fez Contato',          event:'Contact',        triggerType:'auto_first',  keywords:'',                                                                              product:'', fixedValue:'', currency:'BRL' },
+  { id:2, order:2, name:'Demonstrou Interesse',  event:'Lead',           triggerType:'auto_second', keywords:'tenho interesse, quero comprar, quanto custa, qual o valor, me manda o link',   product:'', fixedValue:'', currency:'BRL' },
+  { id:3, order:3, name:'Dados de Pagamento',    event:'AddPaymentInfo', triggerType:'keyword',     keywords:'meu cpf, meu endereço, minha chave pix, dados para pagamento, como pagar',      product:'', fixedValue:'', currency:'BRL' },
+  { id:4, order:4, name:'Comprou',               event:'Purchase',       triggerType:'keyword',     keywords:'paguei, comprei, pix enviado, boleto pago, pagamento feito, pedido confirmado, muito obrigado pela sua compra', product:'Produto', fixedValue:'', currency:'BRL' },
+];
+let journeyEditId = null;
+
+async function initJourney() {
+  renderJourney();
+  if (serverOnline) {
+    try {
+      const d = await api('GET', '/journey');
+      if (d.steps && d.steps.length) {
+        journeySteps = d.steps;
+        saveJourneyLocal();
+        renderJourney();
+        renderFunnel();
+        console.log('🗺️ Jornada carregada do servidor:', journeySteps.length, 'etapas');
+      }
+    } catch(e) {}
+    // Sincroniza a jornada local para o servidor
+    syncJourneyToBackend().catch(()=>{});
+  }
+}
+
+function renderJourney() {
+  const sorted = [...journeySteps].sort((a,b) => a.order - b.order);
+  const evtColor = { Contact:'contact', Purchase:'purchase', Lead:'lead', AddToCart:'org', AddPaymentInfo:'org', InitiateCheckout:'org', ViewContent:'meta', CompleteRegistration:'meta', '':'meta' };
+  const triggerLabel = { auto_first:'Automático (1ª msg)', auto_second:'Automático (2ª msg+)', keyword:'Por palavra-chave', manual:'Manual' };
+
+  document.getElementById('journeyEl').innerHTML = sorted.map(s => {
+    const kws = (s.keywords||'').split(',').map(k=>k.trim()).filter(Boolean);
+    return `<tr>
+      <td style="padding-left:16px;color:var(--mut2);font-size:.72rem">#${s.id}</td>
+      <td><span style="font-weight:800;font-size:.82rem;color:var(--blue)">${s.order}</span></td>
+      <td class="td-name">${s.name}</td>
+      <td>
+        <div style="font-size:.68rem;color:var(--mut);margin-bottom:3px">${triggerLabel[s.triggerType]||'—'}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${kws.slice(0,2).map(k=>`<span style="background:var(--blue-xl);color:var(--blue-d);font-size:.6rem;font-weight:600;padding:2px 7px;border-radius:20px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k}</span>`).join('')}
+          ${kws.length>2?`<span style="color:var(--mut2);font-size:.6rem">+${kws.length-2}</span>`:''}
+        </div>
+      </td>
+      <td>
+        ${s.event ? `<span class="pill ${evtColor[s.event]||'meta'}">${s.event}</span>` : '<span style="color:var(--mut2);font-size:.75rem">—</span>'}
+        ${s.event==='Purchase'&&s.fixedValue ? `<div style="font-size:.65rem;color:var(--grn);font-weight:700;margin-top:2px">R$ ${parseFloat(s.fixedValue).toFixed(2)}</div>` : ''}
+        ${s.event==='Purchase'&&!s.fixedValue ? `<div style="font-size:.62rem;color:var(--org);margin-top:2px">valor automático</div>` : ''}
+      </td>
+      <td>
+        <button class="t-btn" onclick="editJourneyStep(${s.id})" title="Editar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+  saveJourneyLocal();
+  // Sincroniza eventos com backend
+  syncJourneyToBackend();
+}
+
+async function syncJourneyToBackend() {
+  try {
+    await fetch(`${API}/journey/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steps: journeySteps })
+    });
+  } catch(e) {}
+}
+
+function checkJourneyTrigger() {
+  const type = document.getElementById('jmTriggerType').value;
+  document.getElementById('jmKeywordsGroup').style.display = type === 'keyword' ? 'block' : 'none';
+}
+
+function checkJourneyPurchase() {
+  const ev = document.getElementById('jmEvent').value;
+  document.getElementById('jmPurchaseFields').style.display = ev === 'Purchase' ? 'block' : 'none';
+}
+
+function openJourneyModal(editId) {
+  journeyEditId = editId || null;
+  document.getElementById('jmName').value = '';
+  document.getElementById('jmKeywords').value = '';
+  document.getElementById('jmEvent').value = '';
+  document.getElementById('jmTriggerType').value = 'keyword';
+  document.getElementById('jmOrder').value = journeySteps.length + 1;
+  document.getElementById('jmEditId').value = editId || '';
+  document.getElementById('jmDeleteBtn').style.display = editId ? 'block' : 'none';
+  document.getElementById('journeyModalTitle').textContent = editId ? 'Editar Etapa' : 'Nova Etapa';
+  document.getElementById('jmKeywordsGroup').style.display = 'block';
+  document.getElementById('jmPurchaseFields').style.display = 'none';
+  document.getElementById('jmProduct').value = '';
+  document.getElementById('jmValue').value = '';
+  document.getElementById('jmCurrency').value = 'BRL';
+
+  if (editId) {
+    const s = journeySteps.find(x => x.id === editId);
+    if (s) {
+      document.getElementById('jmName').value = s.name;
+      document.getElementById('jmKeywords').value = s.keywords || '';
+      document.getElementById('jmEvent').value = s.event || '';
+      document.getElementById('jmTriggerType').value = s.triggerType || 'keyword';
+      document.getElementById('jmOrder').value = s.order;
+      document.getElementById('jmKeywordsGroup').style.display = (s.triggerType === 'keyword') ? 'block' : 'none';
+      if (s.event === 'Purchase') {
+        document.getElementById('jmPurchaseFields').style.display = 'block';
+        document.getElementById('jmProduct').value = s.product || '';
+        document.getElementById('jmValue').value = s.fixedValue || '';
+        document.getElementById('jmCurrency').value = s.currency || 'BRL';
+      }
+    }
+  }
+  document.getElementById('journeyModalOv').classList.add('show');
+}
+
+function editJourneyStep(id) { openJourneyModal(id); }
+function closeJourneyModal() { document.getElementById('journeyModalOv').classList.remove('show'); }
+
+async function saveJourneyStep() {
+  const name = document.getElementById('jmName').value.trim();
+  if (!name) { showToast('Digite o nome da etapa'); return; }
+  const triggerType = document.getElementById('jmTriggerType').value;
+  const keywords = document.getElementById('jmKeywords').value;
+  const event = document.getElementById('jmEvent').value;
+  if (triggerType === 'keyword' && !keywords.trim()) { showToast('Digite pelo menos uma palavra-chave'); return; }
+
+  const step = {
+    id: journeyEditId || Date.now(),
+    order: parseInt(document.getElementById('jmOrder').value) || journeySteps.length + 1,
+    name, event, triggerType, keywords,
+    product: document.getElementById('jmProduct').value,
+    fixedValue: document.getElementById('jmValue').value,
+    currency: document.getElementById('jmCurrency').value || 'BRL',
+  };
+
+  if (journeyEditId) {
+    const idx = journeySteps.findIndex(x => x.id === journeyEditId);
+    if (idx >= 0) journeySteps[idx] = step;
+  } else {
+    journeySteps.push(step);
+  }
+  saveJourneyLocal();
+  closeJourneyModal();
+  renderJourney();
+  renderFunnel();
+  showToast(journeyEditId ? 'Etapa atualizada! ✅' : 'Etapa criada! ✅');
+}
+
+async function deleteJourneyStep() {
+  if (!journeyEditId) return;
+  if (!confirm('Excluir esta etapa?')) return;
+  journeySteps = journeySteps.filter(x => x.id !== journeyEditId);
+  saveJourneyLocal();
+  try { await fetch(`${API}/journey/steps/${journeyEditId}`, { method: 'DELETE' }); } catch(e) {}
+  closeJourneyModal();
+  renderJourney();
+  renderFunnel();
+  showToast('Etapa excluída');
+}
+
+function saveJourneyLocal() { localStorage.setItem('fb_journey', JSON.stringify(journeySteps)); }
+
+function openSortModal() {
+  const sorted = [...journeySteps].sort((a,b)=>a.order-b.order);
+  document.getElementById('sortList').innerHTML = sorted.map(s=>`
+    <div draggable="true" data-id="${s.id}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sur);border:1.5px solid var(--bdr);border-radius:9px;cursor:grab;user-select:none" 
+      ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropStep(event)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--mut2)" stroke-width="2" stroke-linecap="round"><line x1="9" y1="4" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="20"/></svg>
+      <span style="font-weight:700;font-size:.75rem;color:var(--blue);width:18px">${s.order}</span>
+      <span style="font-size:.82rem;font-weight:600">${s.name}</span>
+      ${s.event?`<span class="pill contact" style="margin-left:auto;font-size:.6rem">${s.event}</span>`:''}
+    </div>`).join('');
+  document.getElementById('sortModalOv').classList.add('show');
+}
+
+let draggedId = null;
+function dragStart(e) { draggedId = parseInt(e.currentTarget.dataset.id); e.currentTarget.style.opacity='.5'; }
+function dragOver(e) { e.preventDefault(); }
+function dropStep(e) {
+  e.preventDefault();
+  const targetId = parseInt(e.currentTarget.dataset.id);
+  if (draggedId === targetId) return;
+  const items = [...document.getElementById('sortList').children];
+  const dragIdx = items.findIndex(el=>parseInt(el.dataset.id)===draggedId);
+  const targetIdx = items.findIndex(el=>parseInt(el.dataset.id)===targetId);
+  if (dragIdx<0||targetIdx<0) return;
+  const dragEl = items[dragIdx];
+  dragEl.style.opacity='1';
+  if (dragIdx<targetIdx) e.currentTarget.after(dragEl); else e.currentTarget.before(dragEl);
+}
+
+async function saveSortOrder() {
+  const items = [...document.getElementById('sortList').children];
+  items.forEach((el,i)=>{
+    const id = parseInt(el.dataset.id);
+    const step = journeySteps.find(s=>s.id===id);
+    if (step) { step.order = i+1; el.querySelector('span').textContent=i+1; }
+  });
+  saveJourneyLocal();
+  try {
+    await fetch(`${API}/journey/reorder`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(localStorage.getItem('token')||'')},body:JSON.stringify({order:journeySteps.map(s=>({id:s.id,order:s.order}))})});
+  } catch(e){}
+  document.getElementById('sortModalOv').classList.remove('show');
+  renderJourney();
+  renderFunnel();
+  showToast('Ordem salva!');
+}
+
+// ── EVENTOS ──
+// Ordem lógica do funil Meta: topo → fundo
+// v2 — força reset se versão antiga detectada
+const _evCache = JSON.parse(localStorage.getItem('fb_eventos') || 'null');
+const _evVersion = 2; // incrementar aqui ao mudar a estrutura
+const _evSavedVersion = localStorage.getItem('fb_eventos_v') ? parseInt(localStorage.getItem('fb_eventos_v')) : 0;
+if (_evSavedVersion < _evVersion) { localStorage.removeItem('fb_eventos'); localStorage.setItem('fb_eventos_v', _evVersion); }
+
+let eventosData = (_evSavedVersion >= _evVersion && _evCache) ? _evCache : [
+  {id:1, order:1, platform:'meta', name:'Contact',             keywords:'oi, olá, bom dia, boa tarde, vim pelo anúncio, vim pelo link, quero saber mais',                                                                                               product:'', fixedValue:'', currency:'BRL'},
+  {id:2, order:2, platform:'meta', name:'Lead',                keywords:'tenho interesse, quero comprar, quanto custa, qual o valor, me manda o link, como funciona',                                                                                    product:'', fixedValue:'', currency:'BRL'},
+  {id:3, order:3, platform:'meta', name:'ViewContent',         keywords:'vi o produto, vi a oferta, me mostra mais, me manda o link da oferta, quero ver mais detalhes',                                                                                 product:'', fixedValue:'', currency:'BRL'},
+  {id:4, order:4, platform:'meta', name:'AddToCart',           keywords:'quero reservar, pode reservar, separa pra mim, me reserva, quero esse',                                                                                                         product:'', fixedValue:'', currency:'BRL'},
+  {id:5, order:5, platform:'meta', name:'InitiateCheckout',    keywords:'vou pagar agora, como faço o pagamento, qual a chave pix, me manda o boleto, quero finalizar',                                                                                  product:'', fixedValue:'', currency:'BRL'},
+  {id:6, order:6, platform:'meta', name:'AddPaymentInfo',      keywords:'meu cpf, meu endereço, minha chave pix, dados para pagamento, vou enviar os dados',                                                                                             product:'', fixedValue:'', currency:'BRL'},
+  {id:7, order:7, platform:'meta', name:'CompleteRegistration',keywords:'cadastro feito, me cadastrei, finalizei o cadastro, concluí o cadastro',                                                                                                        product:'', fixedValue:'', currency:'BRL'},
+  {id:8, order:8, platform:'meta', name:'Purchase',            keywords:'paguei, comprei, pix enviado, boleto pago, pagamento feito, muito obrigado pela sua compra, pedido confirmado, pagamento aprovado, efetuei o pagamento, realizei o pagamento',   product:'Produto Principal', fixedValue:'', currency:'BRL'},
+];
+let eventoEditId = null;
+
+async function initEventos() {
+  renderEventos();
+  // Carrega eventos do backend
+  try {
+    const res = await fetch(`${API}/events`);
+    const data = await res.json();
+    if (data.events && data.events.length) {
+      eventosData = data.events.map(e => ({
+        id: e.id, platform: e.platform || 'meta', name: e.name,
+        keywords: Array.isArray(e.keywords) ? e.keywords.join(', ') : (e.keywords || ''),
+        product: e.product || '', fixedValue: e.fixedValue || '', currency: 'BRL'
+      }));
+    }
+  } catch(e) { /* usa local */ }
+  renderEventos();
+}
+
+function renderEventos() {
+  // Ordena pela ordem lógica do funil
+  const sorted = [...eventosData].sort((a, b) => (a.order || 99) - (b.order || 99));
+
+  const platIco = {
+    meta:  `<div style="width:26px;height:26px;border-radius:7px;background:var(--blue-l);display:flex;align-items:center;justify-content:center" title="Meta Ads"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue-d)" stroke-width="2" stroke-linecap="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></div>`,
+    google:`<div style="width:26px;height:26px;border-radius:7px;background:rgba(245,166,35,.1);display:flex;align-items:center;justify-content:center" title="Google Ads"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>`,
+    ambos: `<div style="display:flex;gap:2px"><div style="width:22px;height:22px;border-radius:6px;background:var(--blue-l);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--blue-d)" stroke-width="2" stroke-linecap="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></div><div style="width:22px;height:22px;border-radius:6px;background:rgba(245,166,35,.1);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div></div>`
+  };
+
+  // Cor de fundo da linha de ordem (azul progressivo)
+  const orderColors = ['#5b9af8','#3f7ee8','#2864cc','#1850b0','#0e3d8a','#0a2f6e','#071f4d'];
+
+  document.getElementById('eventosEl').innerHTML = sorted.map((e, i) => {
+    const kws = (e.keywords||'').split(',').map(k=>k.trim()).filter(Boolean);
+    const ord = e.order || (i + 1);
+    const col = orderColors[Math.min(i, orderColors.length - 1)];
+    return `<tr>
+      <td style="padding-left:16px">
+        <div style="width:26px;height:26px;border-radius:7px;background:${col};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;color:#fff">${ord}</div>
+      </td>
+      <td>${platIco[e.platform]||platIco.meta}</td>
+      <td class="td-name">${e.name}</td>
+      <td style="max-width:260px">
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${kws.slice(0,3).map(k=>`<span style="background:var(--blue-xl);color:var(--blue-d);font-size:.6rem;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${k}</span>`).join('')}
+          ${kws.length>3?`<span style="color:var(--mut2);font-size:.6rem;align-self:center">+${kws.length-3} mais</span>`:''}
+        </div>
+      </td>
+      <td style="font-size:.75rem">
+        ${e.name==='Purchase'
+          ? `<div>${e.product?`<div style="font-weight:600">${e.product}</div>`:''}<div style="${e.fixedValue?'color:var(--grn);font-weight:700':'color:var(--org);font-size:.68rem'}">${e.fixedValue?'R$ '+parseFloat(e.fixedValue).toFixed(2):'Detecta automaticamente'}</div></div>`
+          : '<span style="color:var(--mut2)">—</span>'}
+      </td>
+      <td>
+        <button class="t-btn" onclick="editEvento(${e.id})" title="Editar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+  localStorage.setItem('fb_eventos', JSON.stringify(eventosData));
+}
+
+function openEventoModal(editId) {
+  eventoEditId = editId || null;
+  document.getElementById('emPlatform').value = 'meta';
+  document.getElementById('emName').value = 'Contact';
+  document.getElementById('emKeywords').value = '';
+  document.getElementById('emProduct').value = '';
+  document.getElementById('emValue').value = '';
+  document.getElementById('emCurrency').value = 'BRL';
+  document.getElementById('emCustomName').value = '';
+  document.getElementById('customNameGroup').style.display = 'none';
+  document.getElementById('purchaseFields').style.display = 'none';
+  document.getElementById('emDeleteBtn').style.display = editId ? 'block' : 'none';
+  document.getElementById('eventoModalTitle').textContent = editId ? 'Editar Evento' : 'Novo Evento';
+  if (editId) {
+    const ev = eventosData.find(x=>x.id===editId);
+    if (ev) {
+      document.getElementById('emPlatform').value = ev.platform;
+      const validNames = ['Contact','Lead','Purchase','AddToCart','AddPaymentInfo','ViewContent','CompleteRegistration','InitiateCheckout'];
+      if (validNames.includes(ev.name)) { document.getElementById('emName').value = ev.name; }
+      else { document.getElementById('emName').value = 'custom'; document.getElementById('emCustomName').value = ev.name; document.getElementById('customNameGroup').style.display='block'; }
+      document.getElementById('emKeywords').value = ev.keywords || '';
+      if (ev.name==='Purchase') {
+        document.getElementById('purchaseFields').style.display='block';
+        document.getElementById('emProduct').value = ev.product||'';
+        document.getElementById('emValue').value = ev.fixedValue||'';
+        document.getElementById('emCurrency').value = ev.currency||'BRL';
+      }
+    }
+  }
+  document.getElementById('eventoModalOv').classList.add('show');
+}
+function editEvento(id) { openEventoModal(id); }
+function closeEventoModal() { document.getElementById('eventoModalOv').classList.remove('show'); }
+function checkPurchaseEvent() {
+  const v = document.getElementById('emName').value;
+  document.getElementById('purchaseFields').style.display = v==='Purchase' ? 'block' : 'none';
+  document.getElementById('customNameGroup').style.display = v==='custom' ? 'block' : 'none';
+}
+
+async function saveEvento() {
+  // Salva localmente primeiro, depois tenta sincronizar
+  let name = document.getElementById('emName').value;
+  if (name==='custom') name = document.getElementById('emCustomName').value.trim();
+  if (!name) { showToast('Digite o nome do evento'); return; }
+  const keywords = document.getElementById('emKeywords').value.split(',').map(k=>k.trim()).filter(Boolean);
+  if (!keywords.length) { showToast('Digite pelo menos uma palavra-chave'); return; }
+  const ev = {
+    id: eventoEditId || Date.now(),
+    platform: document.getElementById('emPlatform').value,
+    name,
+    keywords: keywords.join(', '),
+    product: document.getElementById('emProduct').value,
+    fixedValue: document.getElementById('emValue').value,
+    currency: document.getElementById('emCurrency').value,
+  };
+  if (eventoEditId) { const idx=eventosData.findIndex(x=>x.id===eventoEditId); if(idx>=0) eventosData[idx]=ev; }
+  else eventosData.push(ev);
+  // Sync with backend
+  try {
+    const method = eventoEditId ? 'PUT' : 'POST';
+    const url = eventoEditId ? `${API}/events/${eventoEditId}` : `${API}/events`;
+    await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ...ev, keywords, fixedValue: ev.fixedValue || null }) });
+  } catch(e){}
+  closeEventoModal();
+  renderEventos();
+  showToast(eventoEditId?'Evento atualizado! ✅':'Evento criado! ✅');
+}
+
+async function deleteEvento() {
+  if (!eventoEditId) return;
+  if (!confirm('Excluir este evento?')) return;
+  try { await fetch(`${API}/events/${eventoEditId}`, {method:'DELETE'}); } catch(e){}
+  eventosData = eventosData.filter(x=>x.id!==eventoEditId);
+  closeEventoModal();
+  renderEventos();
+  showToast('Evento excluído');
+}
+
+// ── PIXEL LOGS ──
+
+async function initPixel() {
+  renderPixelLogs();
+  if (serverOnline) {
+    try {
+      const d = await api('GET', '/pixel/logs');
+      if (d.logs) { mergePixelLogs(d.logs); }
+    } catch(e) {}
+  }
+}
+
+function mergePixelLogs(incoming) {
+  if (!Array.isArray(incoming)) return;
+  let changed = false;
+  incoming.forEach(log => {
+    if (!pixelLogs.find(p => p.id === log.id)) {
+      pixelLogs.unshift(log); changed = true;
+      // Atualiza gráfico ao receber Contact ou Purchase
+      if (log.sent) {
+        if (log.event === 'Contact')  recordChartEvent('contact');
+        if (log.event === 'Purchase') recordChartEvent('purchase');
+      }
+    }
+  });
+  if (changed) {
+    renderPixelLogs();
+    renderActivity();
+    // Atualiza "último disparo" no card Meta
+    const lastOk = pixelLogs.find(p => p.sent);
+    if (lastOk) {
+      document.getElementById('metaLastFiredWrap').style.display = 'flex';
+      const ts = lastOk.ts ? new Date(lastOk.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+      document.getElementById('metaLastFired').textContent = `${lastOk.event} · ${lastOk.phone} · ${ts}`;
+    }
+  }
+}
+
+const evtPillMap = {
+  Contact:'contact', Lead:'lead', Purchase:'purchase',
+  AddToCart:'org', AddPaymentInfo:'org', InitiateCheckout:'org',
+  ViewContent:'meta', CompleteRegistration:'meta'
+};
+
+function renderPixelLogs() {
+  const el = document.getElementById('pixelEl');
+  const sent = pixelLogs.filter(p=>p.sent).length;
+  document.getElementById('kpi-pixel').textContent = sent;
+  if (!pixelLogs.length) {
+    el.innerHTML = `<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--mut2);font-size:.8rem">Nenhum disparo ainda.<br>Configure o Meta Ads em Conexões para começar.</td></tr>`;
+    return;
+  }
+  el.innerHTML = pixelLogs.slice(0,100).map(p => {
+    const ts   = p.ts ? new Date(p.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : (p.date||'—');
+    const ok   = p.sent;
+    const pill = evtPillMap[p.event] || 'meta';
+    const valStr = p.value ? ` · R$${parseFloat(p.value).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
+    return `<tr>
+      <td style="padding-left:16px;font-size:.74rem;color:var(--mut);white-space:nowrap">${ts}</td>
+      <td class="td-name" style="font-size:.76rem">${p.phone||'—'}</td>
+      <td><div class="retorno-${ok?'ok':'fail'}">
+        ${ok
+          ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
+          : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+        }
+      </div></td>
+      <td><span class="pill ${pill}">${p.event||'—'}</span></td>
+      <td style="font-size:.74rem;color:var(--mut)">${p.stepName||'—'}${valStr}</td>
+      <td style="font-size:.72rem;color:${ok?'var(--grn)':'var(--red)'}">${ok?'Enviado':'Erro'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── FUNIL VISUAL (conectado à Jornada de Compra) ──
+let funnelStats = {};
+
+// Ícones SVG brancos por tipo de evento
+const funnelIcons = {
+  Contact: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  Lead: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  Purchase: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  AddPaymentInfo: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+  AddToCart: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
+  InitiateCheckout: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+  ViewContent: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  CompleteRegistration: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>`,
+  default: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+};
+
+// Paleta de azuis do topo à base
+const funnelColors = [
+  '#5b9af8', '#3f7ee8', '#2864cc', '#1850b0', '#0e3d8a', '#093070'
+];
+
+// ── ACTIVITY FEED (usa pixelLogs reais) ──
+function renderActivity() {
+  const el = document.getElementById('actEl');
+  const ind = document.getElementById('actRefreshIndicator');
+  const recent = pixelLogs.slice(0,12);
+  if (!recent.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px 0;color:var(--mut2);font-size:.8rem">Nenhuma atividade ainda.<br>Conecte o WhatsApp para começar.</div>';
+    return;
+  }
+  if (ind) ind.style.display = 'block';
+  const evIcons = {
+    Contact:      `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+    Lead:         `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    Purchase:     `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+    AddToCart:    `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
+    default:      `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  };
+  const evColors = { Contact:'var(--blue)', Lead:'var(--org)', Purchase:'var(--grn)', AddToCart:'var(--org)', AddPaymentInfo:'var(--pur)', default:'var(--mut)' };
+  el.innerHTML = recent.map(p => {
+    const ts = p.ts ? new Date(p.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const col = evColors[p.event] || evColors.default;
+    const ico = evIcons[p.event]  || evIcons.default;
+    const valStr = p.value ? ` · R$${parseFloat(p.value).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
+    const statusDot = p.sent
+      ? `<span style="color:var(--grn);font-size:.65rem;font-weight:700">✓</span>`
+      : `<span style="color:var(--red);font-size:.65rem;font-weight:700">✗</span>`;
+    return `<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bdr)">
+      <div style="width:26px;height:26px;border-radius:8px;background:${col}18;display:flex;align-items:center;justify-content:center;color:${col};flex-shrink:0">${ico}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.76rem;font-weight:700">${p.event} ${statusDot}</div>
+        <div style="font-size:.67rem;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.phone||'—'}${valStr}</div>
+      </div>
+      <div style="font-size:.65rem;color:var(--mut2);flex-shrink:0">${ts}</div>
+    </div>`;
+  }).join('');
+}
+
+function initFunnel() {
+  renderFunnel();
+  document.getElementById('kpi-clicks').textContent = linksData.reduce((a,l) => a+(l.clicks||0), 0);
+}
+
+function renderFunnel() {
+  // Usa a Jornada de Compra ordenada como base do funil
+  const sorted = [...journeySteps].sort((a, b) => a.order - b.order);
+
+  // Se não tem jornada configurada, mostra padrão
+  const stages = sorted.length > 0 ? sorted.map(s => ({
+    id: s.id,
+    label: s.name,
+    event: s.event || '',
+    count: funnelStats[s.id] || 0,
+  })) : [
+    { id: 'contact',    label: 'Contato',              event: 'Contact',        count: funnelStats.contact    || 0 },
+    { id: 'lead',       label: 'Lead',                 event: 'Lead',           count: funnelStats.lead       || 0 },
+    { id: 'addPayment', label: 'Dados de Pagamento',   event: 'AddPaymentInfo', count: funnelStats.addPayment || 0 },
+    { id: 'purchase',   label: 'Compra',               event: 'Purchase',       count: funnelStats.purchase   || 0 },
+  ];
+
+  const total = stages[0]?.count || 0;
+  const pct = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
+  const n = stages.length;
+
+  // Larguras decrescentes: 100% → ~45%
+  const widths = stages.map((_, i) => Math.round(100 - (i * (55 / Math.max(n - 1, 1)))));
+
+  document.getElementById('funnelEl').innerHTML = stages.map((s, i) => {
+    const color = funnelColors[Math.min(i, funnelColors.length - 1)];
+    const nextColor = funnelColors[Math.min(i + 1, funnelColors.length - 1)];
+    const icon = funnelIcons[s.event] || funnelIcons.default;
+    const stagePct = i === 0 ? 100 : pct(s.count);
+    const convRate = i > 0 ? `${pct(s.count)}% da etapa anterior` : 'Entrada do funil';
+
+    return `
+    <div class="funnel-stage">
+      ${i > 0 ? `<div class="funnel-conv">↓ ${convRate}</div>` : ''}
+      <div class="funnel-block" style="width:${widths[i]}%;background:${color};box-shadow:0 3px 14px ${color}55">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            ${icon}
+          </div>
+          <div>
+            <div class="funnel-lbl">${s.label}</div>
+            ${s.event ? `<div class="funnel-sub">Pixel: ${s.event}</div>` : ''}
+          </div>
+        </div>
+        <div class="funnel-nums">
+          <div class="funnel-count">${s.count}</div>
+          <div class="funnel-pct">${stagePct}%</div>
+        </div>
+      </div>
+      ${i < n - 1 ? `<div class="funnel-arrow" style="border-top:9px solid ${nextColor}"></div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Atualiza KPIs
+  const contactCount = stages[0]?.count || 0;
+  const purchaseStage = stages.find(s => s.event === 'Purchase');
+  const purchaseCount = purchaseStage?.count || 0;
+
+  updateKPIs();
+}
+
+// ── FILTRO DE DATA ──
+let activeFilterDays = 1;
+let customRangeFrom = null;
+let customRangeTo   = null;
+
+function setDateFilter(days, btn) {
+  activeFilterDays = days;
+  customRangeFrom = null;
+  customRangeTo   = null;
+  document.querySelectorAll('.df-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dfCustomLbl').textContent = 'Personalizado';
+  updateRangeLabel();
+  closeCalPop();
+  if (salesChartVisible) setTimeout(renderSalesChart, 50);
+}
+
+function updateRangeLabel() {
+  const el = document.getElementById('dfRangeLbl');
+  if (customRangeFrom && customRangeTo) {
+    const fmt = d => d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'});
+    el.textContent = `${fmt(customRangeFrom)} → ${fmt(customRangeTo)}`;
+  } else {
+    const today = new Date();
+    const days  = activeFilterDays === 'month' ? new Date(today.getFullYear(), today.getMonth(), 1) : new Date(Date.now() - (activeFilterDays - 1) * 86400000);
+    const fmt   = d => d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
+    el.textContent = activeFilterDays === 1 ? 'Hoje' : `${fmt(days)} → ${fmt(today)}`;
+  }
+}
+
+// ── CALENDÁRIO ──
+let calYear, calMonth;
+let calSelFrom = null, calSelTo = null, calHover = null;
+
+function toggleCalPop() {
+  const pop = document.getElementById('calPop');
+  const isOpen = pop.classList.contains('show');
+  closeCalPop();
+  if (!isOpen) {
+    const now = new Date();
+    calYear  = now.getFullYear();
+    calMonth = now.getMonth();
+    calSelFrom = null; calSelTo = null; calHover = null;
+    renderCal();
+    pop.classList.add('show');
+  }
+}
+function closeCalPop() { document.getElementById('calPop').classList.remove('show'); }
+
+function calPrevMonth() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCal(); }
+function calNextMonth() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCal(); }
+
+function renderCal() {
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('calMonthLbl').textContent = `${months[calMonth]} ${calYear}`;
+
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInM  = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+
+  let html = '';
+  // Dias do mês anterior
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = new Date(calYear, calMonth - 1, daysInPrev - i);
+    html += calDayHtml(d, true);
+  }
+  // Dias do mês atual
+  for (let i = 1; i <= daysInM; i++) {
+    const d = new Date(calYear, calMonth, i);
+    html += calDayHtml(d, false);
+  }
+  // Completar grade
+  const total = firstDay + daysInM;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(calYear, calMonth + 1, i);
+    html += calDayHtml(d, true);
+  }
+
+  document.getElementById('calDays').innerHTML = html;
+
+  // Atualiza inputs
+  const fmt = d => d ? d.toLocaleDateString('pt-BR') : '—';
+  document.getElementById('calFrom').textContent = fmt(calSelFrom);
+  document.getElementById('calTo').textContent   = fmt(calSelTo);
+}
+
+function calDayHtml(d, other) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ts = d.getTime();
+  let cls = 'cal-day';
+  if (other) cls += ' other';
+  if (d.getTime() === today.getTime()) cls += ' today';
+  if (calSelFrom && ts === calSelFrom.getTime()) cls += ' range-start selected';
+  else if (calSelTo && ts === calSelTo.getTime()) cls += ' range-end selected';
+  else if (calSelFrom && calSelTo && ts > calSelFrom.getTime() && ts < calSelTo.getTime()) cls += ' in-range';
+  else if (calSelFrom && !calSelTo && calHover && ts > calSelFrom.getTime() && ts <= calHover.getTime()) cls += ' in-range';
+
+  const ds = `${d.getFullYear()},${d.getMonth()},${d.getDate()}`;
+  return `<div class="${cls}" onclick="calClickDay(${ds})" onmouseenter="calHoverDay(${ds})">${d.getDate()}</div>`;
+}
+
+function calClickDay(y, m, d) {
+  const clicked = new Date(y, m, d);
+  if (!calSelFrom || (calSelFrom && calSelTo)) {
+    calSelFrom = clicked; calSelTo = null; calHover = null;
+  } else {
+    if (clicked < calSelFrom) { calSelTo = calSelFrom; calSelFrom = clicked; }
+    else { calSelTo = clicked; }
+  }
+  renderCal();
+}
+
+function calHoverDay(y, m, d) {
+  if (calSelFrom && !calSelTo) { calHover = new Date(y, m, d); renderCal(); }
+}
+
+function applyCustomRange() {
+  if (!calSelFrom || !calSelTo) { showToast('Selecione as duas datas'); return; }
+  customRangeFrom = calSelFrom;
+  customRangeTo   = calSelTo;
+  activeFilterDays = 'custom';
+  document.querySelectorAll('.df-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('dfCustomBtn').classList.add('active');
+  const fmt = d => d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
+  document.getElementById('dfCustomLbl').textContent = `${fmt(calSelFrom)} → ${fmt(calSelTo)}`;
+  updateRangeLabel();
+  closeCalPop();
+  showToast('Período aplicado!');
+  if (salesChartVisible) setTimeout(renderSalesChart, 50);
+}
+
+// Fecha calendário ao clicar fora
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.cal-pop-wrap');
+  if (wrap && !wrap.contains(e.target)) closeCalPop();
+});
+
+// ── GRÁFICO DE VENDAS ──
+let salesChartVisible = false;
+
+function toggleSalesChart() {
+  salesChartVisible = !salesChartVisible;
+  const card  = document.getElementById('salesChartCard');
+  const btn   = document.getElementById('chartToggleBtn');
+  const arrow = document.getElementById('chartToggleArrow');
+  const lbl   = document.getElementById('chartToggleLbl');
+
+  card.style.display = salesChartVisible ? 'block' : 'none';
+  btn.classList.toggle('open', salesChartVisible);
+  arrow.classList.toggle('open', salesChartVisible);
+  lbl.textContent = salesChartVisible ? 'Ocultar gráfico' : 'Mostrar gráfico de vendas';
+
+  if (salesChartVisible) renderSalesChart();
+}
+
+// ── HISTÓRICO DIÁRIO (localStorage como cache local) ──
+const chartHistory = JSON.parse(localStorage.getItem('fb_chart_history') || '{}');
+
+// Chamado pelo webhook/polling quando chega evento real
+function recordChartEvent(type) {
+  const key = new Date().toISOString().split('T')[0];
+  if (!chartHistory[key]) chartHistory[key] = { contacts:0, purchases:0 };
+  if (type === 'contact')  chartHistory[key].contacts++;
+  if (type === 'purchase') chartHistory[key].purchases++;
+  localStorage.setItem('fb_chart_history', JSON.stringify(chartHistory));
+  if (salesChartVisible) renderSalesChart();
+}
+
+// Monta array de dias baseado no filtro ativo
+function buildChartDays() {
+  const today = new Date(); today.setHours(23,59,59,999);
+  let from;
+  if (customRangeFrom && customRangeTo) {
+    const days = [], cur = new Date(customRangeFrom); cur.setHours(0,0,0,0);
+    const end  = new Date(customRangeTo); end.setHours(23,59,59,999);
+    while (cur <= end) { days.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
+    return days;
+  }
+  if (activeFilterDays === 'month') {
+    from = new Date(today.getFullYear(), today.getMonth(), 1);
+  } else if (activeFilterDays === 1) {
+    from = new Date(today); from.setHours(0,0,0,0);
+  } else {
+    from = new Date(today); from.setDate(from.getDate() - (activeFilterDays-1)); from.setHours(0,0,0,0);
+  }
+  const days = [], cur = new Date(from);
+  while (cur <= today) { days.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
+  return days;
+}
+
+async function renderSalesChart() {
+  const days = buildChartDays();
+  const n    = days.length;
+  const fromKey = days[0].toISOString().split('T')[0];
+  const toKey   = days[n-1].toISOString().split('T')[0];
+
+  // Mostra loading rápido
+  document.getElementById('salesChartSvg').innerHTML =
+    '<text x="50%" y="50%" text-anchor="middle" font-size="11" fill="var(--mut2)">Carregando...</text>';
+
+  // Busca dados reais do servidor
+  let serverData = {};
+  try {
+    const r = await fetch(`${API}/chart/data?from=${fromKey}&to=${toKey}`);
+    if (r.ok) { const d = await r.json(); serverData = d.data || {}; }
+  } catch(e) {}
+
+  // Mescla: servidor > cache local > zero
+  const contacts  = days.map(d => { const k=d.toISOString().split('T')[0]; return serverData[k]?.contacts  ?? chartHistory[k]?.contacts  ?? 0; });
+  const purchases = days.map(d => { const k=d.toISOString().split('T')[0]; return serverData[k]?.purchases ?? chartHistory[k]?.purchases ?? 0; });
+
+  // Totais para o subtitle
+  const totC = contacts.reduce((a,b)=>a+b,0);
+  const totP = purchases.reduce((a,b)=>a+b,0);
+  const fmtD = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  document.getElementById('chartSubLbl').textContent =
+    (n===1 ? 'Hoje' : `${fmtD(days[0])} → ${fmtD(days[n-1])}`) +
+    ` · ${totC} contato${totC!==1?'s':''} · ${totP} venda${totP!==1?'s':''}`;
+
+  // Dimensões SVG
+  const svg    = document.getElementById('salesChartSvg');
+  const W      = svg.parentElement.offsetWidth || 620;
+  const H = 200, padL = 36, padR = 12, padT = 14, padB = 6;
+  const chartW = W - padL - padR, chartH = H - padT - padB;
+  const maxVal = Math.max(...contacts, ...purchases, 1);
+  const barGroupW = chartW / n;
+  const barW = Math.max(3, Math.min(26, barGroupW * 0.36));
+  const gap  = Math.max(2, barW * 0.2);
+
+  let html = '';
+
+  // Gridlines + eixo Y
+  const steps = maxVal <= 5 ? maxVal : 4;
+  for (let i = 0; i <= steps; i++) {
+    const y   = padT + (chartH / steps) * i;
+    const val = Math.round(maxVal - (maxVal / steps) * i);
+    html += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--bdr)" stroke-width="1" stroke-dasharray="${i===steps?'0':'4 3'}"/>`;
+    html += `<text x="${padL-6}" y="${(y+4).toFixed(1)}" font-size="9" fill="var(--mut2)" text-anchor="end" font-weight="600">${val}</text>`;
+  }
+
+  // Barras com animação via rect
+  const xLabels = [];
+  days.forEach((day, i) => {
+    const cx = padL + barGroupW * i + barGroupW / 2;
+    const cX = cx - barW - gap/2;
+    const pX = cx + gap/2;
+    const cH = Math.max(contacts[i]  > 0 ? 3 : 0, (contacts[i]  / maxVal) * chartH);
+    const pH = Math.max(purchases[i] > 0 ? 3 : 0, (purchases[i] / maxVal) * chartH);
+    const dateStr = day.toLocaleDateString('pt-BR');
+
+    // Contatos (azul claro)
+    html += `<rect x="${cX.toFixed(1)}" y="${(padT+chartH-cH).toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(cH,0).toFixed(1)}" rx="3" fill="#a8d4fd" opacity="0.92"><title>${dateStr}: ${contacts[i]} contato${contacts[i]!==1?'s':''}</title></rect>`;
+
+    // Vendas (azul escuro)
+    html += `<rect x="${pX.toFixed(1)}" y="${(padT+chartH-pH).toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(pH,0).toFixed(1)}" rx="3" fill="#2864cc"><title>${dateStr}: ${purchases[i]} venda${purchases[i]!==1?'s':''}</title></rect>`;
+
+    // Valor em cima das barras (se couber)
+    if (barGroupW > 22) {
+      if (contacts[i]  > 0) html += `<text x="${(cX+barW/2).toFixed(1)}" y="${(padT+chartH-cH-3).toFixed(1)}" font-size="8" fill="var(--mut)" text-anchor="middle" font-weight="700">${contacts[i]}</text>`;
+      if (purchases[i] > 0) html += `<text x="${(pX+barW/2).toFixed(1)}" y="${(padT+chartH-pH-3).toFixed(1)}" font-size="8" fill="#2864cc" text-anchor="middle" font-weight="700">${purchases[i]}</text>`;
+    }
+
+    // Labels eixo X (inteligente: mostra máx 8)
+    const step  = Math.ceil(n / 8);
+    const show  = n <= 8 || i === 0 || i === n-1 || i % step === 0;
+    if (show) xLabels.push({ x: cx, label: n <= 31 ? day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : day.toLocaleDateString('pt-BR',{month:'short',day:'2-digit'}) });
+  });
+
+  // Linha divisória eixo X
+  html += `<line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="var(--bdr)" stroke-width="1.5"/>`;
+
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.innerHTML = html;
+
+  // Labels X abaixo
+  const labelsEl = document.getElementById('salesChartXLabels');
+  labelsEl.innerHTML = '';
+  labelsEl.style.cssText = 'position:relative;height:18px;margin-top:2px';
+  xLabels.forEach(l => {
+    const span = document.createElement('span');
+    span.style.cssText = `font-size:.6rem;color:var(--mut2);font-weight:600;text-align:center;position:absolute;left:${(l.x-20).toFixed(0)}px;width:40px;white-space:nowrap`;
+    span.textContent = l.label;
+    labelsEl.appendChild(span);
+  });
+}
+
+// ── INIT ──
+setTimeout(updateRangeLabel, 100);
+</script>
+</body>
+</html>
