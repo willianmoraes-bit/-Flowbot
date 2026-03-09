@@ -295,12 +295,12 @@ app.post('/whatsapp/connect', async (req, res) => {
 
 app.get('/whatsapp/status/:instanceName', async (req, res) => {
   try {
-    const data  = await evo('GET', `/instance/fetchInstances?instanceName=${req.params.instanceName}`);
-    const inst  = Array.isArray(data) ? data[0] : data;
-    const state = inst?.instance?.state;
+    const data = await evo('GET', `/instance/connectionState/${req.params.instanceName}`);
+    const state = data?.instance?.state || data?.state;
+    const number = data?.instance?.ownerJid?.replace('@s.whatsapp.net','') || null;
     res.json({
       connected: state === 'open',
-      number: inst?.instance?.profileName || inst?.instance?.owner || null,
+      number,
       state,
     });
   } catch(err) { res.json({ connected: false }); }
