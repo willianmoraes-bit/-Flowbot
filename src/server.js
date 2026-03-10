@@ -9,10 +9,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
-const EVOLUTION_URL =process.env.EVOLUTION_URL || 'https://evolution-api-production-41a3.up.railway.app'
+const EVOLUTION_URL = process.env.EVOLUTION_URL || 'https://evolution-api-production-41a3.up.railway.app'
 const EVOLUTION_KEY = process.env.EVOLUTION_KEY  || 'flowbot123';
 
-// ── Pixel config em memória (restaurado pelo dashboard ao carregar) ──
+// ── Pixel config em memória ──
 let pixelConfig = {
   pixelId:   process.env.META_PIXEL_ID   || '',
   token:     process.env.META_TOKEN      || '',
@@ -28,11 +28,14 @@ let journeySteps = [
 ];
 
 // ── Estado em memória ──
-const leadTracker = {};  // phone → { stepId, stepOrder, msgCount, firstSeen, lastSeen }
+const leadTracker = {};  // phone → { stepId, stepOrder, msgCount, firstSeen, lastSeen, messages, unread }
 const funnelStats = {};  // stepId → count
 const pixelLog    = [];  // array de log entries
 
-// ── Histórico diário para gráfico { 'YYYY-MM-DD': { contacts, purchases } } ──
+// ── Cache de histórico já sincronizado por instância+phone ──
+const historySynced = {}; // `${instanceName}:${phone}` → true
+
+// ── Histórico diário para gráfico ──
 const chartHistory = {};
 function recordDay(type) {
   const key = new Date().toISOString().split('T')[0];
@@ -52,8 +55,108 @@ async function evo(method, endpoint, body = null) {
 }
 
 // ══════════════════════════
+// SINCRONIZA HISTÓRICO DO EVOLUTION para um contato
+// Chama a Evolution API e injeta mensagens antigas no leadTracker
+// ══════════════════════════
+async function syncHistoryFromEvolution(instanceName, phone) {
+  const cacheKey = `${instanceName}:${phone}`;
+  if (historySynced[cacheKey]) return; // já sincronizou, não repete
+  historySynced[cacheKey] = true;
+
+  try {
+    // Busca até 100 mensagens históricas do contato
+    const result = await evo('GET', `/chat/findMessages/${instanceName}?where[key][remoteJid]=${phone}@s.whatsapp.net&limit=100`);
+    const msgs = result?.messages?.records || result?.records || result?.messages || [];
+    if (!msgs.length) return;
+
+    // Garante que o lead existe na memória
+    const now = Date.now();
+    if (!leadTracker[phone]) {
+      leadTracker[phone] = { stepId: null, stepOrder: 0, msgCount: 0, firstSeen: now, lastSeen: now, messages: [], unread: 0, name: phone };
+    }
+    const lead = leadTracker[phone];
+
+    // Converte mensagens do Evolution para o formato interno
+    const historicMsgs = msgs
+      .filter(m => m.message) // só mensagens com conteúdo
+      .map(m => ({
+        fromMe: m.key?.fromMe || false,
+        text:   m.message?.conversation
+             || m.message?.extendedTextMessage?.text
+             || m.message?.imageMessage?.caption
+             || m.message?.videoMessage?.caption
+             || (m.key?.fromMe ? '[mensagem enviada]' : '[mídia]'),
+        ts:     (m.messageTimestamp || 0) * 1000, // Evolution usa segundos
+        pixelEvent: null,
+      }))
+      .sort((a, b) => a.ts - b.ts); // ordem cronológica
+
+    // Mescla: histórico antigo + mensagens já em memória (evita duplicatas por timestamp)
+    const existingTs = new Set(lead.messages.map(m => m.ts));
+    const toAdd = historicMsgs.filter(m => !existingTs.has(m.ts));
+
+    if (toAdd.length) {
+      lead.messages = [...toAdd, ...lead.messages].sort((a, b) => a.ts - b.ts);
+      // Limita a 200 mensagens mais recentes
+      if (lead.messages.length > 200) lead.messages = lead.messages.slice(-200);
+      console.log(`📂 Histórico sincronizado: ${phone} → +${toAdd.length} mensagens`);
+    }
+
+    // Atualiza nome se disponível
+    const lastWithName = msgs.find(m => m.pushName);
+    if (lastWithName?.pushName) lead.name = lastWithName.pushName;
+
+  } catch(err) {
+    // Não quebra o fluxo se falhar (Evolution pode não ter o endpoint disponível)
+    console.log(`⚠️  Histórico ${phone}: ${err.message.substring(0, 80)}`);
+    // Remove do cache para tentar novamente depois
+    delete historySynced[cacheKey];
+  }
+}
+
+// ══════════════════════════
+// BUSCA TODAS AS CONVERSAS DO EVOLUTION e pré-carrega históricos
+// Chamado quando o dashboard abre /conversations
+// ══════════════════════════
+async function syncAllChatsFromEvolution(instanceName) {
+  try {
+    const result = await evo('GET', `/chat/findChats/${instanceName}`);
+    const chats = Array.isArray(result) ? result : (result?.chats || []);
+    if (!chats.length) return;
+
+    // Filtra só conversas individuais (não grupos)
+    const individual = chats.filter(c => {
+      const jid = c.id || c.remoteJid || '';
+      return jid.includes('@s.whatsapp.net');
+    });
+
+    console.log(`📋 ${individual.length} conversas encontradas no Evolution`);
+
+    // Para cada conversa, garante que o lead existe na memória
+    for (const chat of individual.slice(0, 50)) { // limite de 50 para não sobrecarregar
+      const jid   = chat.id || chat.remoteJid || '';
+      const phone = jid.replace('@s.whatsapp.net', '');
+      const name  = chat.name || chat.pushName || phone;
+      const now   = Date.now();
+
+      if (!leadTracker[phone]) {
+        leadTracker[phone] = {
+          stepId: null, stepOrder: 0, msgCount: 0,
+          firstSeen: now, lastSeen: now,
+          messages: [], unread: 0, name,
+        };
+      } else if (name !== phone) {
+        leadTracker[phone].name = name;
+      }
+    }
+  } catch(err) {
+    console.log(`⚠️  syncAllChats: ${err.message.substring(0, 80)}`);
+  }
+}
+
+// ══════════════════════════
 // AUTH
-// ══════════════════════════process.env.EVOLUTION_URL
+// ══════════════════════════
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'dashboard.html')));
 app.post('/auth/register', async (req, res) => res.json(await register(req.body.email, req.body.password)));
 app.post('/auth/login',    async (req, res) => res.json(await login(req.body.email, req.body.password)));
@@ -226,9 +329,8 @@ async function processMessage(phone, text, metadata = {}) {
     leadTracker[phone] = { stepId: null, stepOrder: 0, msgCount: 0, firstSeen: now, lastSeen: now, messages: [], name: metadata.name || phone, unread: 0 };
   const lead = leadTracker[phone];
   if (!lead.messages) lead.messages = [];
-  // Armazena mensagem no histórico
   lead.messages.push({ fromMe: false, text, ts: now });
-  if (lead.messages.length > 200) lead.messages = lead.messages.slice(-200); // max 200 msgs
+  if (lead.messages.length > 200) lead.messages = lead.messages.slice(-200);
   lead.msgCount++;
   lead.lastSeen = now;
   lead.unread = (lead.unread || 0) + 1;
@@ -243,7 +345,6 @@ async function processMessage(phone, text, metadata = {}) {
     if (triggerType === 'keyword'     && matchKeyword(text, keywords))  matched = true;
     if (matched) { firedEvent = step.event; await advanceLead(phone, step, text); break; }
   }
-  // Marca a última mensagem com o evento disparado (visível no chat)
   if (firedEvent && lead.messages.length > 0) {
     lead.messages[lead.messages.length - 1].pixelEvent = firedEvent;
   }
@@ -256,17 +357,16 @@ app.post('/whatsapp/connect', async (req, res) => {
   const { userId = 'default', method = 'qr', phone } = req.body;
   const instanceName = `flowbot_${userId}`;
   try {
-    // Verifica se instância já existe e está conectada
     try {
       const status = await evo('GET', `/instance/connectionState/${instanceName}`);
       if (status?.instance?.state === 'open') {
+        // Pré-carrega conversas em background quando já conectado
+        syncAllChatsFromEvolution(instanceName).catch(() => {});
         return res.json({ instanceName, connected: true, number: status?.instance?.ownerJid?.replace('@s.whatsapp.net','') });
       }
     } catch(e) {}
-    // Remove instância antiga se existir
     try { await evo('DELETE', `/instance/delete/${instanceName}`); } catch(e) {}
     await new Promise(r => setTimeout(r, 800));
-    // Cria nova instância
     await evo('POST', '/instance/create', {
       instanceName,
       qrcode: method === 'qr',
@@ -275,13 +375,11 @@ app.post('/whatsapp/connect', async (req, res) => {
     await new Promise(r => setTimeout(r, 2000));
 
     if (method === 'pairing' && phone) {
-      // Gera código de pareamento
       const result = await evo('POST', `/instance/pairingCode/${instanceName}`, { phoneNumber: phone });
       const code   = result.code || result.pairingCode || null;
       if (!code) return res.json({ error: 'Código não gerado. Tente pelo QR Code.' });
       return res.json({ instanceName, pairingCode: code });
     } else {
-      // QR Code
       const qr = await evo('GET', `/instance/connect/${instanceName}`);
       const qrcode = qr.base64 || qr.qrcode?.base64 || null;
       if (!qrcode) return res.json({ error: 'QR Code não gerado. Aguarde e tente novamente.' });
@@ -298,11 +396,13 @@ app.get('/whatsapp/status/:instanceName', async (req, res) => {
     const data = await evo('GET', `/instance/connectionState/${req.params.instanceName}`);
     const state = data?.instance?.state || data?.state;
     const number = data?.instance?.ownerJid?.replace('@s.whatsapp.net','') || null;
-    res.json({
-      connected: state === 'open',
-      number,
-      state,
-    });
+
+    // Quando conectado, pré-carrega todas as conversas em background
+    if (state === 'open') {
+      syncAllChatsFromEvolution(req.params.instanceName).catch(() => {});
+    }
+
+    res.json({ connected: state === 'open', number, state });
   } catch(err) { res.json({ connected: false }); }
 });
 
@@ -329,55 +429,65 @@ app.post('/whatsapp/setup-webhook', async (req, res) => {
 // WEBHOOK — recebe mensagens
 // ══════════════════════════
 app.post('/webhook/messages', async (req, res) => {
-  res.json({ received: true }); // responde rápido
+  res.json({ received: true });
   try {
     const ev = req.body;
     if (ev.event === 'messages.upsert') {
       const msg = ev.data?.messages?.[0];
-      if (msg && !msg.key?.fromMe) {
+      if (msg) {
         const phone    = (msg.key?.remoteJid || '').replace('@s.whatsapp.net','').replace('@g.us','');
         const text     = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
         const pushName = msg.pushName || msg.notifyName || null;
-        if (phone && text && !phone.includes('@') && !phone.includes('-')) {
-          console.log(`📨 ${pushName||phone}: ${text.substring(0,80)}`);
-          await processMessage(phone, text, { name: pushName });
+        const fromMe   = msg.key?.fromMe || false;
+
+        if (phone && !phone.includes('@') && !phone.includes('-')) {
+          if (fromMe) {
+            // ── Mensagem ENVIADA pelo usuário do WhatsApp ──
+            if (!leadTracker[phone]) {
+              leadTracker[phone] = { stepId: null, stepOrder: 0, msgCount: 0, firstSeen: Date.now(), lastSeen: Date.now(), messages: [], unread: 0, name: phone };
+            }
+            const lead = leadTracker[phone];
+            if (text) {
+              lead.messages.push({ fromMe: true, text, ts: Date.now() });
+              if (lead.messages.length > 200) lead.messages = lead.messages.slice(-200);
+            }
+            lead.lastSeen = Date.now();
+          } else {
+            // ── Mensagem RECEBIDA ──
+            if (text) {
+              console.log(`📨 ${pushName||phone}: ${text.substring(0,80)}`);
+              await processMessage(phone, text, { name: pushName });
+            }
+          }
         }
       }
     }
     if (ev.event === 'connection.update') {
       console.log(`🔌 ${ev.instance} → ${ev.data?.state}`);
+      // Quando reconectar, limpa cache de histórico para re-sincronizar
+      if (ev.data?.state === 'open') {
+        const instance = ev.instance;
+        Object.keys(historySynced).forEach(k => {
+          if (k.startsWith(instance + ':')) delete historySynced[k];
+        });
+        syncAllChatsFromEvolution(instance).catch(() => {});
+      }
     }
   } catch(err) { console.error('Webhook error:', err.message); }
-});
-
-// ══════════════════════════
-// START
-// ══════════════════════════
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('');
-  console.log('🚀 ═══════════════════════════════════════');
-  console.log(`   FlowBot rodando → http://localhost:${PORT}`);
-  console.log('════════════════════════════════════════════');
-  console.log(`📡 Evolution API  : ${EVOLUTION_URL}`);
-  console.log(`🎯 Pixel Meta     : ${pixelConfig.pixelId ? '✅ ' + pixelConfig.pixelId : '⚠️  Não configurado — configure em Conexões'}`);
-  console.log(`🗺️  Jornada        : ${journeySteps.length} etapas`);
-  console.log(`🔗 Webhook        : ${process.env.WEBHOOK_URL || 'http://localhost:3000/webhook/messages'}`);
-  console.log('');
-  console.log('  Passos para iniciar:');
-  console.log('  1. docker-compose up -d');
-  console.log('  2. Acesse http://localhost:3000');
-  console.log('  3. Vá em Conexões → Conectar WhatsApp');
-  console.log('  4. Configure o Pixel em Conexões → Meta Ads');
-  console.log('');
 });
 
 // ══════════════════════════════════════════════
 // CONVERSAS — API para o dashboard
 // ══════════════════════════════════════════════
 
-// Formata conversas do leadTracker para o dashboard
-app.get('/conversations', (req, res) => {
+// Lista todas as conversas
+app.get('/conversations', async (req, res) => {
+  // Pré-carrega conversas do Evolution em background (se instanceName fornecido)
+  const { instanceName } = req.query;
+  if (instanceName) {
+    syncAllChatsFromEvolution(instanceName).catch(() => {});
+  }
+
   const convs = Object.entries(leadTracker).map(([phone, lead]) => {
     const step = journeySteps.find(s => s.id === lead.stepId);
     const msgs = (lead.messages || []).map(m => ({
@@ -403,6 +513,42 @@ app.get('/conversations', (req, res) => {
   res.json({ conversations: convs });
 });
 
+// ── NOVO: Histórico completo de uma conversa específica ──
+// GET /conversations/:phone?instanceName=flowbot_default
+app.get('/conversations/:phone', async (req, res) => {
+  const { phone } = req.params;
+  const { instanceName = 'flowbot_default' } = req.query;
+
+  // Sincroniza histórico do Evolution para este contato
+  await syncHistoryFromEvolution(instanceName, phone);
+
+  const lead = leadTracker[phone];
+  if (!lead) return res.json({ phone, messages: [], name: phone, stage: 'Novo' });
+
+  // Zera unread quando o dashboard abre a conversa
+  lead.unread = 0;
+
+  const step = journeySteps.find(s => s.id === lead.stepId);
+  const messages = (lead.messages || []).map(m => ({
+    dir:        m.fromMe ? 'out' : 'in',
+    txt:        m.text,
+    time:       new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    date:       new Date(m.ts).toLocaleDateString('pt-BR'),
+    ts:         m.ts,
+    pixelEvent: m.pixelEvent || null,
+  }));
+
+  res.json({
+    phone,
+    name:     lead.name || phone,
+    stage:    step?.name || 'Novo',
+    msgCount: lead.msgCount,
+    firstSeen: lead.firstSeen,
+    lastSeen:  lead.lastSeen,
+    messages,
+  });
+});
+
 // Envia mensagem pelo WhatsApp
 app.post('/whatsapp/send', async (req, res) => {
   const { instanceName, phone, message } = req.body;
@@ -413,14 +559,36 @@ app.post('/whatsapp/send', async (req, res) => {
       options: { delay: 200 },
       textMessage: { text: message }
     });
-    // Registra no histórico local
     if (!leadTracker[phone]) leadTracker[phone] = { stepId: null, stepOrder: 0, msgCount: 0, firstSeen: Date.now(), lastSeen: Date.now(), messages: [], unread: 0 };
     if (!leadTracker[phone].messages) leadTracker[phone].messages = [];
     leadTracker[phone].messages.push({ fromMe: true, text: message, ts: Date.now() });
+    if (leadTracker[phone].messages.length > 200) leadTracker[phone].messages = leadTracker[phone].messages.slice(-200);
     leadTracker[phone].lastSeen = Date.now();
     res.json({ success: true, result });
   } catch(err) {
     console.error('Send message error:', err.message);
     res.json({ error: err.message });
   }
+});
+
+// ══════════════════════════
+// START
+// ══════════════════════════
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log('');
+  console.log('🚀 ═══════════════════════════════════════');
+  console.log(`   FlowBot rodando → http://localhost:${PORT}`);
+  console.log('════════════════════════════════════════════');
+  console.log(`📡 Evolution API  : ${EVOLUTION_URL}`);
+  console.log(`🎯 Pixel Meta     : ${pixelConfig.pixelId ? '✅ ' + pixelConfig.pixelId : '⚠️  Não configurado — configure em Conexões'}`);
+  console.log(`🗺️  Jornada        : ${journeySteps.length} etapas`);
+  console.log(`🔗 Webhook        : ${process.env.WEBHOOK_URL || 'http://localhost:3000/webhook/messages'}`);
+  console.log('');
+  console.log('  Passos para iniciar:');
+  console.log('  1. docker-compose up -d');
+  console.log('  2. Acesse http://localhost:3000');
+  console.log('  3. Vá em Conexões → Conectar WhatsApp');
+  console.log('  4. Configure o Pixel em Conexões → Meta Ads');
+  console.log('');
 });
