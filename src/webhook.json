@@ -1,0 +1,6 @@
+{
+  "url": "https://flowbot-production-2d32.up.railway.app/webhook/messages",
+  "webhook_by_events": false,
+  "webhook_base64": false,
+  "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE"]
+}

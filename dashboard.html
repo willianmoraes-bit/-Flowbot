@@ -1870,9 +1870,8 @@ async function checkWAOnLoad() {
 // ── CONVERSATIONS ──
 
 // ── CONVERSAS ──
-let convData    = [];
-let activeConv  = null;
-let lastConvIds = new Set();
+let convData   = [];
+let activeConv = null;
 
 function initConvs() {
   renderConvList([]);
@@ -1881,7 +1880,8 @@ function initConvs() {
 
 async function loadConvs() {
   try {
-    const d = await api('GET', '/conversations');
+    const instanceName = waInstanceName || localStorage.getItem('fb_wa_instance') || 'flowbot_default';
+    const d = await api('GET', `/conversations?instanceName=${instanceName}`);
     if (d.conversations) mergeConversations(d.conversations);
   } catch(e) {}
 }
@@ -1891,17 +1891,27 @@ function mergeConversations(incoming) {
   incoming.forEach(conv => {
     const idx = convData.findIndex(c => c.id === conv.id);
     if (idx >= 0) {
-      // Atualiza msgs e stage
       const prev = convData[idx];
-      if (conv.msgs?.length !== prev.msgs?.length || conv.stage !== prev.stage) {
-        convData[idx] = conv; changed = true;
-        if (activeConv === conv.id) openConv(conv.id);
+      if ((conv.msgs?.length || 0) > (prev.msgs?.length || 0) || conv.stage !== prev.stage) {
+        if ((conv.msgs?.length || 0) > (prev.msgs?.length || 0)) {
+          convData[idx] = conv;
+        } else {
+          convData[idx].stage    = conv.stage;
+          convData[idx].unread   = conv.unread;
+          convData[idx].lastTime = conv.lastTime;
+        }
+        changed = true;
+        if (activeConv === conv.id) renderConvMessages(convData[idx]);
       }
     } else {
-      convData.unshift(conv); changed = true;
-      // Badge de nova conversa na nav
+      convData.unshift(conv);
+      changed = true;
       const badge = document.getElementById('convBadge');
-      if (badge) { badge.textContent = convData.length; badge.style.display='inline-block'; }
+      if (badge) {
+        const total = convData.reduce((a, c) => a + (c.unread || 0), 0);
+        badge.textContent = total;
+        badge.style.display = total > 0 ? 'inline-block' : 'none';
+      }
     }
   });
   if (changed) renderConvList(convData);
@@ -1919,11 +1929,13 @@ function renderConvList(data) {
     return;
   }
   el.innerHTML = data.map(conv => {
-    const lastMsg  = conv.msgs?.[conv.msgs.length-1];
+    const lastMsg  = conv.msgs?.[conv.msgs.length - 1];
     const timeStr  = conv.lastTime || conv.time || '';
     const stageTxt = conv.stage || 'Novo';
-    const unread   = conv.unread > 0 ? `<span style="min-width:18px;height:18px;background:var(--blue);color:#fff;border-radius:50%;font-size:.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${conv.unread}</span>` : '';
-    return `<div class="conv-item${activeConv===conv.id?' active':''}" onclick="openConv('${conv.id}')">
+    const unread   = conv.unread > 0
+      ? `<span style="min-width:18px;height:18px;background:var(--blue);color:#fff;border-radius:50%;font-size:.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${conv.unread}</span>`
+      : '';
+    return `<div class="conv-item${activeConv === conv.id ? ' active' : ''}" onclick="openConv('${conv.id}')">
       <div class="conv-name">${conv.name || conv.phone}<span class="conv-time">${timeStr}</span></div>
       <div class="conv-phone">${conv.phone}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;gap:6px">
@@ -1935,24 +1947,84 @@ function renderConvList(data) {
   }).join('');
 }
 
-function openConv(id) {
+async function openConv(id) {
   activeConv = id;
   const conv = convData.find(x => x.id == id);
   if (!conv) return;
+
   conv.unread = 0;
-  document.getElementById('convName').textContent    = conv.name || conv.phone;
-  document.getElementById('convPhone').textContent   = conv.phone;
-  document.getElementById('convStage').innerHTML     = `<span class="pill ${stagePillMap[conv.stage]||'meta'}">${conv.stage||'Novo'}</span>`;
-  const msgs = conv.msgs || [];
-  document.getElementById('convMsgs').innerHTML = msgs.map(m => {
-    const pixelTag = m.pixelEvent ? `<div class="msg-tag lead"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Pixel: ${m.pixelEvent}</div>` : '';
-    return `<div style="display:flex;flex-direction:column;align-items:${m.dir==='in'?'flex-start':'flex-end'}">
+  document.getElementById('convName').textContent  = conv.name || conv.phone;
+  document.getElementById('convPhone').textContent = conv.phone;
+  document.getElementById('convStage').innerHTML   = `<span class="pill ${stagePillMap[conv.stage]||'meta'}">${conv.stage||'Novo'}</span>`;
+  renderConvList(convData);
+
+  // Mostra cache imediatamente se tiver, senão mostra spinner
+  if (conv.msgs?.length) {
+    renderConvMessages(conv);
+  } else {
+    document.getElementById('convMsgs').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--mut2)">
+        <div style="width:22px;height:22px;border:3px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></div>
+        <div style="font-size:.76rem">Carregando histórico...</div>
+      </div>`;
+  }
+
+  // Busca histórico completo do Evolution
+  const instanceName = waInstanceName || localStorage.getItem('fb_wa_instance') || 'flowbot_default';
+  try {
+    const d = await api('GET', `/conversations/${conv.phone}?instanceName=${instanceName}`);
+    if (d.messages?.length) {
+      conv.msgs  = d.messages;
+      conv.name  = d.name  || conv.name;
+      conv.stage = d.stage || conv.stage;
+      if (activeConv === id) {
+        document.getElementById('convName').textContent  = conv.name || conv.phone;
+        document.getElementById('convStage').innerHTML   = `<span class="pill ${stagePillMap[conv.stage]||'meta'}">${conv.stage||'Novo'}</span>`;
+        renderConvMessages(conv);
+        renderConvList(convData);
+      }
+    } else if (!conv.msgs?.length) {
+      document.getElementById('convMsgs').innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:var(--mut2);font-size:.8rem">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--blue-m)" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 8px;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Nenhuma mensagem encontrada.
+        </div>`;
+    }
+  } catch(e) {
+    if (conv.msgs?.length) renderConvMessages(conv);
+  }
+}
+
+function renderConvMessages(conv) {
+  const msgs   = conv.msgs || [];
+  const msgsEl = document.getElementById('convMsgs');
+  if (!msgs.length) {
+    msgsEl.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--mut2);font-size:.8rem">Nenhuma mensagem ainda.</div>`;
+    return;
+  }
+  let lastDate = null;
+  let html = '';
+  msgs.forEach(m => {
+    const dateStr = m.date || (m.ts ? new Date(m.ts).toLocaleDateString('pt-BR') : null);
+    if (dateStr && dateStr !== lastDate) {
+      lastDate = dateStr;
+      const isToday = dateStr === new Date().toLocaleDateString('pt-BR');
+      html += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <div style="flex:1;height:1px;background:var(--bdr)"></div>
+        <span style="font-size:.63rem;font-weight:700;color:var(--mut2);padding:2px 10px;background:var(--blue-xl);border-radius:20px;border:1px solid var(--bdr)">${isToday ? 'Hoje' : dateStr}</span>
+        <div style="flex:1;height:1px;background:var(--bdr)"></div>
+      </div>`;
+    }
+    const pixelTag = m.pixelEvent
+      ? `<div class="msg-tag lead"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Pixel: ${m.pixelEvent}</div>`
+      : '';
+    html += `<div style="display:flex;flex-direction:column;align-items:${m.dir==='in'?'flex-start':'flex-end'}">
       <div class="msg ${m.dir}">${escHtml(m.txt)}<div class="msg-time">${m.time||''}</div></div>
       ${pixelTag}
     </div>`;
-  }).join('');
-  document.getElementById('convMsgs').scrollTop = 999999;
-  renderConvList(convData);
+  });
+  msgsEl.innerHTML = html;
+  msgsEl.scrollTop = 999999;
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1963,17 +2035,17 @@ function filterConvs(q) {
 }
 
 async function sendMsg() {
-  const inp   = document.getElementById('msgInput');
-  const text  = inp.value.trim();
+  const inp  = document.getElementById('msgInput');
+  const text = inp.value.trim();
   if (!text || !activeConv) return;
-  const conv  = convData.find(x => x.id == activeConv);
+  const conv = convData.find(x => x.id == activeConv);
   if (!conv) return;
-  const time  = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  // Adiciona localmente imediatamente
-  conv.msgs.push({ dir:'out', txt:text, time, status:'sending' });
+  const time = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  const date = new Date().toLocaleDateString('pt-BR');
+  if (!conv.msgs) conv.msgs = [];
+  conv.msgs.push({ dir:'out', txt:text, time, date, status:'sending' });
   inp.value = '';
-  openConv(activeConv);
-  // Envia ao servidor
+  renderConvMessages(conv);
   if (serverOnline && waInstanceName) {
     try {
       await api('POST', '/whatsapp/send', {
@@ -1981,13 +2053,10 @@ async function sendMsg() {
         phone: conv.phone,
         message: text
       });
-      const lastMsg = conv.msgs[conv.msgs.length-1];
-      if (lastMsg) lastMsg.status = 'sent';
-      openConv(activeConv);
+      conv.msgs[conv.msgs.length - 1].status = 'sent';
     } catch(e) {
       showToast('Erro ao enviar mensagem');
-      const lastMsg = conv.msgs[conv.msgs.length-1];
-      if (lastMsg) lastMsg.status = 'error';
+      conv.msgs[conv.msgs.length - 1].status = 'error';
     }
   }
 }
