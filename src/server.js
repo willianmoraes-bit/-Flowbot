@@ -124,7 +124,6 @@ async function syncAllChatsFromEvolution(instanceName) {
     const chats = Array.isArray(result) ? result : (result?.chats || []);
     if (!chats.length) return;
 
-    // Filtra só conversas individuais (não grupos)
     const individual = chats.filter(c => {
       const jid = c.id || c.remoteJid || '';
       return jid.includes('@s.whatsapp.net');
@@ -132,8 +131,7 @@ async function syncAllChatsFromEvolution(instanceName) {
 
     console.log(`📋 ${individual.length} conversas encontradas no Evolution`);
 
-    // Para cada conversa, garante que o lead existe na memória
-    for (const chat of individual.slice(0, 50)) { // limite de 50 para não sobrecarregar
+    for (const chat of individual.slice(0, 50)) {
       const jid   = chat.id || chat.remoteJid || '';
       const phone = jid.replace('@s.whatsapp.net', '');
       const name  = chat.name || chat.pushName || phone;
@@ -147,6 +145,25 @@ async function syncAllChatsFromEvolution(instanceName) {
         };
       } else if (name !== phone) {
         leadTracker[phone].name = name;
+      }
+
+      // Carrega mensagens se ainda não tem
+      if (!leadTracker[phone].messages?.length) {
+        try {
+          const msgs = await evo('POST', `/chat/findMessages/${instanceName}`, {
+            where: { key: { remoteJid: jid } },
+            limit: 50
+          });
+          const list = Array.isArray(msgs) ? msgs : (msgs?.messages?.records || msgs?.messages || []);
+          if (list.length) {
+            leadTracker[phone].messages = list.map(m => ({
+              text:    m.message?.conversation || m.message?.extendedTextMessage?.text || '',
+              fromMe:  m.key?.fromMe || false,
+              ts:      m.messageTimestamp ? m.messageTimestamp * 1000 : Date.now(),
+            })).filter(m => m.text);
+            leadTracker[phone].lastSeen = leadTracker[phone].messages.at(-1)?.ts || now;
+          }
+        } catch(e) {}
       }
     }
   } catch(err) {
@@ -482,9 +499,12 @@ app.post('/webhook/messages', async (req, res) => {
 
 // Lista todas as conversas
 app.get('/conversations', async (req, res) => {
-  // Pré-carrega conversas do Evolution em background (se instanceName fornecido)
   const { instanceName } = req.query;
-  if (instanceName) {
+  
+  // Se leadTracker vazio, espera o sync terminar antes de responder
+  if (instanceName && Object.keys(leadTracker).length === 0) {
+    await syncAllChatsFromEvolution(instanceName).catch(() => {});
+  } else if (instanceName) {
     syncAllChatsFromEvolution(instanceName).catch(() => {});
   }
 
@@ -494,6 +514,7 @@ app.get('/conversations', async (req, res) => {
       dir:  m.fromMe ? 'out' : 'in',
       txt:  m.text,
       time: new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      date: new Date(m.ts).toLocaleDateString('pt-BR'),
       pixelEvent: m.pixelEvent || null
     }));
     return {
@@ -512,6 +533,8 @@ app.get('/conversations', async (req, res) => {
   });
   res.json({ conversations: convs });
 });
+```
+
 
 // ── NOVO: Histórico completo de uma conversa específica ──
 // GET /conversations/:phone?instanceName=flowbot_default
